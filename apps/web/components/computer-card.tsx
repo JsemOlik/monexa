@@ -45,17 +45,34 @@ export function ComputerCard({ computer }: ComputerCardProps) {
           : "border-t-red-500",
       )}
     >
-      <div className="px-5">
-        <div className="flex flex-col gap-0.5 mb-4">
-          <h3 className="text-xl font-bold tracking-tight text-white dark:text-foreground truncate leading-tight">
-            {computer.name}
-          </h3>
-          <p className="text-sm text-muted-foreground/80 font-medium">
-            {computer.status === "online" ? "Zapnuto" : "Vypnuto"}
-          </p>
+      <div className="px-5 ">
+        <div className="flex flex-col gap-1 mb-3">
+          <div className="flex justify-between items-start">
+            <h3 className="text-xl font-bold tracking-tight text-white dark:text-foreground truncate leading-tight">
+              {computer.name}
+            </h3>
+          </div>
+          <div className="flex items-center justify-between mt-1">
+            <div className="flex items-center gap-2 text-[0.8rem] font-medium text-muted-foreground/90">
+              <span
+                className={
+                  computer.status === "online"
+                    ? "text-[#10a37f]"
+                    : "text-red-500/90"
+                }
+              >
+                {computer.status === "online" ? "Zapnuto" : "Vypnuto"}
+              </span>
+              <span className="text-muted-foreground/40">•</span>
+              <span>{lastSeenText}</span>
+            </div>
+            <span className="text-[0.65rem] text-muted-foreground uppercase font-bold tracking-wider opacity-70">
+              {computer.os}
+            </span>
+          </div>
         </div>
 
-        <div className="flex items-center gap-1.5 mt-2">
+        <div className="flex items-center gap-1.5">
           <ActionButton icon={Power} />
           <ActionButton icon={RotateCcw} />
           <ActionButton icon={Shield} />
@@ -64,15 +81,6 @@ export function ComputerCard({ computer }: ComputerCardProps) {
           <div className="ml-auto">
             <ActionButton icon={Unplug} variant="danger" />
           </div>
-        </div>
-
-        <div className="mt-3 flex justify-between items-center opacity-60">
-          <p className="text-[0.7rem] text-muted-foreground uppercase font-bold tracking-wider">
-            {lastSeenText}
-          </p>
-          <p className="text-[0.7rem] text-muted-foreground uppercase font-bold tracking-wider">
-            {computer.os}
-          </p>
         </div>
       </div>
     </Card>

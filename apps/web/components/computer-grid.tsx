@@ -43,7 +43,7 @@ export function ComputerGrid() {
 
   return (
     <div className="@container">
-      <div className="grid gap-4 @xs:grid-cols-1 @xl:grid-cols-2 @4xl:grid-cols-3 @6xl:grid-cols-4 @7xl:grid-cols-5">
+      <div className="grid gap-4 @xs:grid-cols-1 @xl:grid-cols-2 @5xl:grid-cols-3 @7xl:grid-cols-4">
         {renderItems.map((item, index) =>
           computers ? (
             <ComputerCard key={(item as any).id} computer={item as any} />
@@ -59,24 +59,28 @@ export function ComputerGrid() {
 export function ComputerSkeleton() {
   return (
     <Card className="overflow-hidden border border-border/10 border-t-[6px] border-t-slate-200 dark:border-t-slate-800 bg-sidebar shadow-none rounded-2xl transition-all">
-      <div className="pt-2 pb-2 px-5">
-        <div className="flex flex-col gap-0.5 mb-3">
-          <Skeleton className="h-6 w-[140px] mb-1" />
-          <Skeleton className="h-3 w-12" />
+      <div className="px-5 pt-4 pb-4">
+        <div className="flex flex-col gap-1 mb-5">
+          <div className="flex justify-between items-start">
+            <Skeleton className="h-6 w-[140px]" />
+          </div>
+          <div className="flex items-center justify-between mt-1">
+            <div className="flex items-center gap-2 text-[0.8rem] font-medium text-muted-foreground/90">
+              <Skeleton className="h-3 w-14" />
+              <span className="text-muted-foreground/40">•</span>
+              <Skeleton className="h-3 w-20" />
+            </div>
+            <Skeleton className="h-3 w-10" />
+          </div>
         </div>
 
-        <div className="flex items-center gap-1.5 mt-2">
+        <div className="flex items-center gap-1.5 border-t border-border/40 pt-4">
           {Array.from({ length: 5 }).map((_, i) => (
             <Skeleton key={i} className="h-10 w-10 rounded-xl" />
           ))}
           <div className="ml-auto">
             <Skeleton className="h-10 w-10 rounded-xl" />
           </div>
-        </div>
-
-        <div className="mt-5 pt-3 border-t border-border/50 flex justify-between items-center opacity-60">
-          <Skeleton className="h-2 w-20" />
-          <Skeleton className="h-2 w-12" />
         </div>
       </div>
     </Card>
