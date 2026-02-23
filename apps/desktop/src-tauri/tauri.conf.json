@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "desktop",
+  "productName": "Monexa",
   "version": "0.1.0",
   "identifier": "com.jsemolik.monexa",
   "build": {
@@ -12,9 +12,9 @@
   "app": {
     "windows": [
       {
-        "title": "desktop",
-        "width": 800,
-        "height": 600
+        "title": "Monexa",
+        "width": 350,
+        "height": 500
       }
     ],
     "security": {
