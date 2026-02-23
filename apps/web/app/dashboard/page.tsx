@@ -9,6 +9,7 @@ import { Monitor, Circle, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useEffect, useState } from "react";
+import { ComputerCard } from "@/components/computer-card";
 
 export default function Page() {
   return (
@@ -24,7 +25,7 @@ export default function Page() {
       <SidebarInset>
         <SiteHeader />
         <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-          <div className="grid auto-rows-min gap-4 md:grid-cols-3">
+          <div className="grid auto-rows-min gap-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
             <ComputersGrid />
           </div>
         </div>
@@ -74,34 +75,7 @@ function ComputersGrid() {
   return (
     <>
       {computers.map((computer) => (
-        <Card key={computer.id} className="relative overflow-hidden">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              {computer.name}
-            </CardTitle>
-            <Monitor className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-xs text-muted-foreground uppercase">
-              {computer.os}
-            </div>
-            <div className="mt-2 flex items-center gap-2">
-              <Circle
-                className={`h-2.5 w-2.5 fill-current ${
-                  computer.status === "online"
-                    ? "text-emerald-500"
-                    : "text-red-500"
-                }`}
-              />
-              <span className="text-sm font-medium capitalize">
-                {computer.status}
-              </span>
-            </div>
-            <div className="mt-1 text-[10px] text-muted-foreground">
-              Last seen: {new Date(computer.lastSeen).toLocaleString()}
-            </div>
-          </CardContent>
-        </Card>
+        <ComputerCard key={computer.id} computer={computer} />
       ))}
     </>
   );
@@ -122,19 +96,27 @@ function CenteredLoading() {
 
 function ComputerSkeleton() {
   return (
-    <Card className="relative overflow-hidden">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <Skeleton className="h-4 w-[100px]" />
-        <Monitor className="h-4 w-4 text-muted-foreground opacity-50" />
-      </CardHeader>
-      <CardContent>
-        <Skeleton className="h-3 w-[60px]" />
-        <div className="mt-2 flex items-center gap-2">
-          <Skeleton className="h-2.5 w-2.5 rounded-full" />
-          <Skeleton className="h-4 w-[50px]" />
+    <Card className="overflow-hidden border border-border/10 border-t-[6px] border-t-slate-200 dark:border-t-slate-800 bg-sidebar shadow-none rounded-2xl transition-all">
+      <div className="pt-2 pb-2 px-5">
+        <div className="flex flex-col gap-0.5 mb-3">
+          <Skeleton className="h-6 w-[140px] mb-1" />
+          <Skeleton className="h-3 w-12" />
         </div>
-        <Skeleton className="mt-2 h-3 w-[120px]" />
-      </CardContent>
+
+        <div className="flex items-center gap-1.5 mt-2">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} className="h-10 w-10 rounded-xl" />
+          ))}
+          <div className="ml-auto">
+            <Skeleton className="h-10 w-10 rounded-xl" />
+          </div>
+        </div>
+
+        <div className="mt-5 pt-3 border-t border-border/50 flex justify-between items-center opacity-60">
+          <Skeleton className="h-2 w-20" />
+          <Skeleton className="h-2 w-12" />
+        </div>
+      </div>
     </Card>
   );
 }
