@@ -43,7 +43,7 @@ export function ComputerGrid() {
 
   return (
     <div className="@container">
-      <div className="grid gap-4 @xs:grid-cols-1 @xl:grid-cols-2 @5xl:grid-cols-3 @7xl:grid-cols-4">
+      <div className="grid gap-4 @xs:grid-cols-1 @xl:grid-cols-2 @6xl:grid-cols-3 @7xl:grid-cols-3">
         {renderItems.map((item, index) =>
           computers ? (
             <ComputerCard key={(item as any).id} computer={item as any} />
