@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@clerk/nextjs": "^6.38.1",
+    "@clerk/themes": "^2.4.55",
     "@monexa/types": "workspace:*",
     "convex": "^1.32.0",
     "next": "16.1.6",
