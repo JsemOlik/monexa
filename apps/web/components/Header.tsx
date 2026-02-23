@@ -2,6 +2,7 @@
 
 import { SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
 import { Authenticated, Unauthenticated } from "convex/react";
+import Link from "next/link";
 
 export default function Header() {
   return (
@@ -17,6 +18,9 @@ export default function Header() {
       </Unauthenticated>
       {/* Show the user button when the user is signed in */}
       <Authenticated>
+        <button>
+          <Link href={"/dashboard"}>Dashboard</Link>
+        </button>
         <UserButton />
       </Authenticated>
     </header>
