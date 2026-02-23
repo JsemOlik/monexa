@@ -10,6 +10,7 @@ const convex = new ConvexHttpClient(CONVEX_URL);
 const httpServer = createServer();
 const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer, {
   cors: { origin: "*" },
+  path: "/client",
 });
 
 io.on("connection", (socket) => {

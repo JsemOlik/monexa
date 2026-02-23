@@ -6,6 +6,7 @@ const SERVER_URL = "http://localhost:3001";
 
 export const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io(SERVER_URL, {
   autoConnect: false,
+  path: "/client",
 });
 
 export async function initSocket() {
