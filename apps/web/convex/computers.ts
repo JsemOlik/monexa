@@ -25,6 +25,25 @@ export const register = mutation({
         os: args.os,
         status: "online",
         lastSeen: Date.now(),
+        isBlocked: false,
+      });
+    }
+  },
+});
+
+export const toggleBlock = mutation({
+  args: {
+    id: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("computers")
+      .withIndex("by_computerId", (q) => q.eq("id", args.id))
+      .unique();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        isBlocked: !existing.isBlocked,
       });
     }
   },

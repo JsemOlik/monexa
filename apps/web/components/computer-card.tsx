@@ -23,6 +23,7 @@ interface ComputerCardProps {
     os: string;
     status: "online" | "offline";
     lastSeen: number;
+    isBlocked?: boolean;
   };
 }
 
@@ -44,6 +45,7 @@ export function ComputerCard({ computer }: ComputerCardProps) {
   const [isRenameOpen, setIsRenameOpen] = useState(false);
   const renameComputer = useMutation(api.computers.rename);
   const setOffline = useMutation(api.computers.setOffline);
+  const toggleBlock = useMutation(api.computers.toggleBlock);
 
   const handleRename = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,6 +57,10 @@ export function ComputerCard({ computer }: ComputerCardProps) {
 
   const handleDisconnect = async () => {
     await setOffline({ id: computer.id });
+  };
+
+  const handleBlock = async () => {
+    await toggleBlock({ id: computer.id });
   };
 
   useEffect(() => {
@@ -91,9 +97,11 @@ export function ComputerCard({ computer }: ComputerCardProps) {
     <Card
       className={cn(
         "overflow-hidden border border-border/10 border-t-[6px] bg-[#1c1c1c] dark:bg-sidebar shadow-none transition-all rounded-2xl flex flex-col",
-        computer.status === "online"
-          ? "border-t-[#10a37f]"
-          : "border-t-red-500",
+        computer.isBlocked
+          ? "border-t-orange-500"
+          : computer.status === "online"
+            ? "border-t-[#10a37f]"
+            : "border-t-red-500",
       )}
     >
       <div className="px-5 ">
@@ -107,12 +115,18 @@ export function ComputerCard({ computer }: ComputerCardProps) {
             <div className="flex items-center gap-2 text-[0.8rem] font-medium text-muted-foreground/90">
               <span
                 className={
-                  computer.status === "online"
-                    ? "text-[#10a37f]"
-                    : "text-red-500/90"
+                  computer.isBlocked
+                    ? "text-orange-500"
+                    : computer.status === "online"
+                      ? "text-[#10a37f]"
+                      : "text-red-500/90"
                 }
               >
-                {computer.status === "online" ? "Zapnuto" : "Vypnuto"}
+                {computer.isBlocked
+                  ? "Zablokováno"
+                  : computer.status === "online"
+                    ? "Zapnuto"
+                    : "Vypnuto"}
               </span>
               <span className="text-muted-foreground/40">•</span>
               <span>{lastSeenText}</span>
@@ -126,7 +140,11 @@ export function ComputerCard({ computer }: ComputerCardProps) {
         <div className="flex items-center gap-1.5">
           <ActionButton icon={Power} />
           <ActionButton icon={RotateCcw} />
-          <ActionButton icon={Shield} />
+          <ActionButton
+            icon={Shield}
+            onClick={handleBlock}
+            className={cn(computer.isBlocked && "bg-orange-500/20 text-orange-500 hover:bg-orange-500/30")}
+          />
           <ActionButton icon={Radar} />
 
           <Dialog open={isRenameOpen} onOpenChange={setIsRenameOpen}>

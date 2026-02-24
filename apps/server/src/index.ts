@@ -19,12 +19,22 @@ const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer, {
 // Subscribe to computer changes in Convex
 convex.onUpdate(api.computers.list, {}, (computers) => {
   for (const computer of computers) {
-    if (computer.status === "offline") {
-      const socket = activeSockets.get(computer.id);
-      if (socket) {
+    const socket = activeSockets.get(computer.id);
+    if (socket) {
+      // Handle physical disconnection if marked offline
+      if (computer.status === "offline") {
         console.log(`[${new Date().toISOString()}] Forcefully disconnecting computer: ${computer.name} (${computer.id})`);
         socket.disconnect(true);
         activeSockets.delete(computer.id);
+        continue;
+      }
+
+      // Handle real-time blocking
+      const isBlocked = !!computer.isBlocked;
+      if ((socket as any).isBlocked !== isBlocked) {
+        console.log(`[${new Date().toISOString()}] Toggling block state for: ${computer.name} (${computer.id}) to ${isBlocked}`);
+        (socket as any).isBlocked = isBlocked;
+        socket.emit("setBlocked" as any, isBlocked);
       }
     }
   }

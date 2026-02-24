@@ -1,8 +1,14 @@
+use std::sync::Mutex;
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{TrayIconBuilder, TrayIconEvent},
-    Manager, WindowEvent,
+    webview::WebviewWindowBuilder,
+    AppHandle, Manager, WindowEvent,
 };
+
+struct AppState {
+    is_blocked: Mutex<bool>,
+}
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
@@ -10,9 +16,61 @@ fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
 }
 
+fn create_blocked_window(app: &AppHandle) -> Result<(), String> {
+    if app.get_webview_window("blocked").is_none() {
+        WebviewWindowBuilder::new(
+            app,
+            "blocked",
+            tauri::WebviewUrl::App("index.html#/blocked".into()),
+        )
+        .title("Monexa - Blocked")
+        .fullscreen(true)
+        .always_on_top(true)
+        .decorations(false)
+        .resizable(false)
+        .visible(true)
+        .build()
+        .map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+async fn toggle_block_window(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, AppState>,
+    blocked: bool,
+) -> Result<(), String> {
+    let mut is_blocked = state.is_blocked.lock().unwrap();
+    *is_blocked = blocked;
+
+    if blocked {
+        // Hide main window
+        if let Some(main_window) = app.get_webview_window("main") {
+            let _ = main_window.hide();
+        }
+        create_blocked_window(&app)?;
+    } else {
+        // Close blocked window
+        if let Some(blocked_window) = app.get_webview_window("blocked") {
+            let _ = blocked_window.close();
+        }
+
+        // Show main window
+        if let Some(main_window) = app.get_webview_window("main") {
+            let _ = main_window.show();
+            let _ = main_window.set_focus();
+        }
+    }
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .manage(AppState {
+            is_blocked: Mutex::new(false),
+        })
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_os::init())
         .setup(|app| {
@@ -54,12 +112,31 @@ pub fn run() {
             Ok(())
         })
         .on_window_event(|window, event| {
-            if let WindowEvent::CloseRequested { api, .. } = event {
-                api.prevent_close();
-                window.hide().unwrap();
+            let app = window.app_handle();
+            let state = app.state::<AppState>();
+            let is_blocked = *state.is_blocked.lock().unwrap();
+
+            match event {
+                WindowEvent::CloseRequested { api, .. } => {
+                    if window.label() == "main" {
+                        api.prevent_close();
+                        window.hide().unwrap();
+                    } else if window.label() == "blocked" && is_blocked {
+                        // Prevent Alt+F4/Close on the blocked window
+                        api.prevent_close();
+                    }
+                }
+                WindowEvent::Destroyed => {
+                    if window.label() == "blocked" && is_blocked {
+                        // If the window was somehow destroyed while still blocked, recreate it.
+                        let app_handle = app.clone();
+                        let _ = create_blocked_window(&app_handle);
+                    }
+                }
+                _ => {}
             }
         })
-        .invoke_handler(tauri::generate_handler![greet])
+        .invoke_handler(tauri::generate_handler![greet, toggle_block_window])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

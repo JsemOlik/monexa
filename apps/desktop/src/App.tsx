@@ -1,9 +1,43 @@
 import { useEffect, useState } from "react";
 import { socket } from "./lib/socket";
+import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
+
+function BlockedContent() {
+  return (
+    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black/95 text-white backdrop-blur-md cursor-none">
+      <div className="flex flex-col items-center gap-6 animate-in fade-in zoom-in duration-500">
+        <div className="rounded-full bg-red-500/20 p-6 ring-1 ring-red-500/50">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="48"
+            height="48"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="text-red-500"
+          >
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />
+            <path d="m14.5 9-5 5" />
+            <path d="m9.5 9 5 5" />
+          </svg>
+        </div>
+        <div className="text-center space-y-2">
+          <h1 className="text-3xl font-bold tracking-tight text-white">Your computer is blocked</h1>
+          <p className="text-zinc-400 text-lg">Please contact your administrator for further details.</p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function App() {
   const [isConnected, setIsConnected] = useState(socket.connected);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const isBlockedWindow = window.location.hash === "#/blocked";
 
   useEffect(() => {
     function onConnect() {
@@ -14,14 +48,31 @@ function App() {
       setIsConnected(false);
     }
 
+    function onSetBlocked(blocked: boolean) {
+      setIsBlocked(blocked);
+    }
+
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
+    socket.on("setBlocked" as any, onSetBlocked);
 
     return () => {
       socket.off("connect", onConnect);
       socket.off("disconnect", onDisconnect);
+      socket.off("setBlocked" as any, onSetBlocked);
     };
   }, []);
+
+  // Sync blocked state with Rust window manager
+  useEffect(() => {
+    if (!isBlockedWindow) {
+      invoke("toggle_block_window", { blocked: isBlocked }).catch(console.error);
+    }
+  }, [isBlocked, isBlockedWindow]);
+
+  if (isBlockedWindow) {
+    return <BlockedContent />;
+  }
 
   return (
     <main className="m-0 flex flex-col items-center justify-center gap-3 text-center">
