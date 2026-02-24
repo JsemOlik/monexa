@@ -55,3 +55,21 @@ export const list = query({
     return await ctx.db.query("computers").collect();
   },
 });
+export const rename = mutation({
+  args: {
+    id: v.string(),
+    newName: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("computers")
+      .withIndex("by_computerId", (q) => q.eq("id", args.id))
+      .unique();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        name: args.newName,
+      });
+    }
+  },
+});

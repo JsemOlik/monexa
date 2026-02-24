@@ -1,10 +1,20 @@
-"use client";
-
-import { useEffect, useState } from "react";
+import { useEffect, useState, forwardRef } from "react";
 import { Power, RotateCcw, Shield, Radar, Pencil, Unplug } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
 
 interface ComputerCardProps {
   computer: {
@@ -18,6 +28,17 @@ interface ComputerCardProps {
 
 export function ComputerCard({ computer }: ComputerCardProps) {
   const [lastSeenText, setLastSeenText] = useState("");
+  const [newName, setNewName] = useState(computer.name);
+  const [isOpen, setIsOpen] = useState(false);
+  const renameComputer = useMutation(api.computers.rename);
+
+  const handleRename = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newName.trim()) {
+      await renameComputer({ id: computer.id, newName: newName.trim() });
+      setIsOpen(false);
+    }
+  };
 
   useEffect(() => {
     const updateTime = () => {
@@ -90,7 +111,50 @@ export function ComputerCard({ computer }: ComputerCardProps) {
           <ActionButton icon={RotateCcw} />
           <ActionButton icon={Shield} />
           <ActionButton icon={Radar} />
-          <ActionButton icon={Pencil} />
+
+          <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>
+              <ActionButton icon={Pencil} />
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md bg-[#1c1c1c] border-border/10 text-white rounded-2xl">
+              <DialogHeader>
+                <DialogTitle>Rename Computer</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleRename}>
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="name" className="text-muted-foreground">
+                      Hostname
+                    </Label>
+                    <Input
+                      id="name"
+                      value={newName}
+                      onChange={(e) => setNewName(e.target.value)}
+                      className="bg-[#2c2c2e] border-border/10 text-white focus-visible:ring-[#10a37f]"
+                      autoFocus
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setIsOpen(false)}
+                    className="text-white hover:bg-white/5"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    className="bg-[#10a37f] hover:bg-[#0e8c6d] text-white"
+                  >
+                    Save Changes
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+
           <div className="ml-auto">
             <ActionButton icon={Unplug} variant="danger" />
           </div>
@@ -100,15 +164,17 @@ export function ComputerCard({ computer }: ComputerCardProps) {
   );
 }
 
-function ActionButton({
-  icon: Icon,
-  variant = "default",
-}: {
-  icon: any;
-  variant?: "default" | "danger";
-}) {
+const ActionButton = forwardRef<
+  HTMLButtonElement,
+  {
+    icon: any;
+    variant?: "default" | "danger";
+    [key: string]: any;
+  }
+>(({ icon: Icon, variant = "default", ...props }, ref) => {
   return (
     <Button
+      ref={ref}
       variant="ghost"
       size="icon"
       className={cn(
@@ -116,8 +182,11 @@ function ActionButton({
         variant === "danger" &&
           "bg-destructive/10 hover:bg-destructive/20 text-destructive shadow-none",
       )}
+      {...props}
     >
       <Icon className="h-4 w-4" />
     </Button>
   );
-}
+});
+
+ActionButton.displayName = "ActionButton";
