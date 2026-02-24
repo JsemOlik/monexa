@@ -35,7 +35,6 @@ function App() {
           {isConnected ? "Connected to Server" : "Disconnected"}
         </span>
       </div>
-
       {!isConnected && (
         <button className="reconnect-button" onClick={() => socket.connect()}>
           Reconnect
