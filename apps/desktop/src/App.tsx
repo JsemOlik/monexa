@@ -335,6 +335,8 @@ function SurveyContent({ computerHostname }: { computerHostname: string }) {
     );
   }
 
+  const [hoveredRating, setHoveredRating] = useState<number | null>(null);
+
   const currentStep = surveyData.steps[currentStepIndex];
   const progress = ((currentStepIndex + 1) / surveyData.steps.length) * 100;
 
@@ -362,12 +364,19 @@ function SurveyContent({ computerHostname }: { computerHostname: string }) {
 
         <div className="flex-1 min-h-[300px]">
           {currentStep.type === "star_rating" && (
-            <div className="flex gap-4">
+            <div
+              className="flex gap-4"
+              onMouseLeave={() => setHoveredRating(null)}
+            >
               {[1, 2, 3, 4, 5].map((rating) => {
-                const isSelected = Number(answers[currentStep.id]) === rating;
+                const currentSelection = Number(answers[currentStep.id]) || 0;
+                const isSelected = currentSelection === rating;
+                const isActive = rating <= (hoveredRating || currentSelection);
+
                 return (
                   <button
                     key={rating}
+                    onMouseEnter={() => setHoveredRating(rating)}
                     onClick={() =>
                       setAnswers((prev) => ({
                         ...prev,
@@ -376,13 +385,15 @@ function SurveyContent({ computerHostname }: { computerHostname: string }) {
                     }
                     className={cn(
                       "size-20 rounded-2xl flex items-center justify-center transition-all duration-200 border-2",
-                      isSelected
-                        ? "bg-emerald-500 border-emerald-400 text-white shadow-[0_0_30px_rgba(16,185,129,0.4)] scale-110"
+                      isActive
+                        ? "bg-emerald-500 border-emerald-400 text-white shadow-[0_0_30px_rgba(16,185,129,0.3)]"
                         : "bg-white/5 border-white/5 hover:bg-white/10 text-zinc-500",
+                      isSelected &&
+                        "scale-110 shadow-[0_0_40px_rgba(16,185,129,0.5)]",
                     )}
                   >
-                    {isSelected ? (
-                      <IconStarFilled className="size-10" />
+                    {isActive ? (
+                      <IconStarFilled className="size-10 text-white" />
                     ) : (
                       <IconStar className="size-10" />
                     )}
