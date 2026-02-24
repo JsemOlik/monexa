@@ -183,3 +183,31 @@ export const validateOrg = query({
     return { isValid: !!existing };
   },
 });
+
+export const assignToRoom = mutation({
+  args: { 
+    computerId: v.id("computers"),
+    roomId: v.optional(v.id("rooms")),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+
+    const orgId = (identity as any).org_id || identity.orgId || identity.subject;
+
+    const computer = await ctx.db.get(args.computerId);
+    if (!computer || computer.orgId !== orgId) {
+      throw new Error("Computer not found or unauthorized");
+    }
+
+    if (args.roomId) {
+      const room = await ctx.db.get(args.roomId);
+      if (!room || room.orgId !== orgId) {
+        throw new Error("Room not found or unauthorized");
+      }
+    }
+
+    await ctx.db.patch(args.computerId, { roomId: args.roomId });
+    console.log(`[CONVEX] Assigned computer ${computer.id} to room ${args.roomId}`);
+  },
+});

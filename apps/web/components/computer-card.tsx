@@ -28,7 +28,10 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-export function ComputerCard({ computer }: { computer: any }) {
+export const ComputerCard = forwardRef<
+  HTMLDivElement,
+  { computer: any; isManagement?: boolean } & React.HTMLAttributes<HTMLDivElement>
+>(({ computer, isManagement, className, ...props }, ref) => {
   const [isRenaming, setIsRenaming] = useState(false);
   const [newName, setNewName] = useState(computer.name);
   const [currentTime, setCurrentTime] = useState(Date.now());
@@ -48,6 +51,7 @@ export function ComputerCard({ computer }: { computer: any }) {
 
   return (
     <Card
+      ref={ref}
       className={cn(
         "overflow-hidden border border-border/10 border-t-[6px] bg-[#1c1c1c] dark:bg-sidebar shadow-none transition-all rounded-2xl flex flex-col",
         isBlocked
@@ -55,10 +59,12 @@ export function ComputerCard({ computer }: { computer: any }) {
           : isOnline
             ? "border-t-[#10a37f]"
             : "border-t-orange-500",
+        className
       )}
+      {...props}
     >
-      <div className="px-5 ">
-        <div className="flex flex-col gap-1 mb-3">
+      <div className="px-5">
+        <div className="flex flex-col gap-1">
           <div className="flex justify-between items-start">
             <h3 className="text-xl font-bold tracking-tight text-white dark:text-foreground truncate leading-tight">
               {computer.name}
@@ -82,88 +88,90 @@ export function ComputerCard({ computer }: { computer: any }) {
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5">
-          <ActionButton
-            icon={Shield}
-            onClick={() => toggleBlock({ id: computer.id })}
-            className={cn(
-              isBlocked && "bg-red-500 text-white hover:bg-red-600 border-red-600"
-            )}
-            title={isBlocked ? "Odblokovat" : "Zablokovat"}
-          />
-          
-          <Dialog open={isRenaming} onOpenChange={setIsRenaming}>
-            <DialogTrigger asChild>
-              <ActionButton icon={Pencil} title="Přejmenovat" />
-            </DialogTrigger>
-            <DialogContent className="border-white/10 bg-zinc-950 text-white sm:max-w-[425px]">
-              <DialogHeader>
-                <DialogTitle>Přejmenovat počítač</DialogTitle>
-                <DialogDescription className="text-zinc-400">
-                  Zadejte nový název pro toto zařízení.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <Input
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  className="border-white/10 bg-zinc-900 text-white"
-                />
-              </div>
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => setIsRenaming(false)}
-                  className="border-white/10 bg-transparent text-white hover:bg-white/5"
-                >
-                  Zrušit
-                </Button>
-                <Button
-                  onClick={() => {
-                    rename({ id: computer.id, newName });
-                    setIsRenaming(false);
-                  }}
-                  className="bg-white text-black hover:bg-white/90"
-                >
-                  Uložit
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-          
-          <div className="ml-auto">
-            {isOnline && (
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <ActionButton icon={Unplug} variant="danger" title="Odpojit" />
-                </AlertDialogTrigger>
-                <AlertDialogContent className="border-white/10 bg-zinc-950 text-white">
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Odpojit počítač?</AlertDialogTitle>
-                    <AlertDialogDescription className="text-zinc-400">
-                      Opravdu chcete odpojit počítač {computer.name}? Pokud je aplikace na počítači spuštěna, bude spojení ihned ukončeno.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel className="border-white/10 bg-transparent text-white hover:bg-white/5">
-                      Zrušit
-                    </AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={() => setOffline({ id: computer.id })}
-                      className="bg-red-500 text-white hover:bg-red-600"
-                    >
-                      Odpojit
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            )}
+        {!isManagement && (
+          <div className="flex items-center gap-1.5 mt-4">
+            <ActionButton
+              icon={Shield}
+              onClick={() => toggleBlock({ id: computer.id })}
+              className={cn(
+                isBlocked && "bg-red-500 text-white hover:bg-red-600 border-red-600"
+              )}
+              title={isBlocked ? "Odblokovat" : "Zablokovat"}
+            />
+            
+            <Dialog open={isRenaming} onOpenChange={setIsRenaming}>
+              <DialogTrigger asChild>
+                <ActionButton icon={Pencil} title="Přejmenovat" />
+              </DialogTrigger>
+              <DialogContent className="border-white/10 bg-zinc-950 text-white sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle>Přejmenovat počítač</DialogTitle>
+                  <DialogDescription className="text-zinc-400">
+                    Zadejte nový název pro toto zařízení.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <Input
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    className="border-white/10 bg-zinc-900 text-white"
+                  />
+                </div>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsRenaming(false)}
+                    className="border-white/10 bg-transparent text-white hover:bg-white/5"
+                  >
+                    Zrušit
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      rename({ id: computer.id, newName });
+                      setIsRenaming(false);
+                    }}
+                    className="bg-white text-black hover:bg-white/90"
+                  >
+                    Uložit
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            
+            <div className="ml-auto">
+              {isOnline && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <ActionButton icon={Unplug} variant="danger" title="Odpojit" />
+                  </AlertDialogTrigger>
+                  <AlertDialogContent className="border-white/10 bg-zinc-950 text-white">
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Odpojit počítač?</AlertDialogTitle>
+                      <AlertDialogDescription className="text-zinc-400">
+                        Opravdu chcete odpojit počítač {computer.name}? Pokud je aplikace na počítači spuštěna, bude spojení ihned ukončeno.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel className="border-white/10 bg-transparent text-white hover:bg-white/5">
+                        Zrušit
+                      </AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => setOffline({ id: computer.id })}
+                        className="bg-red-500 text-white hover:bg-red-600"
+                      >
+                        Odpojit
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </Card>
   );
-}
+});
 
 const ActionButton = forwardRef<
   HTMLButtonElement,

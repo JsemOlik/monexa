@@ -125,7 +125,7 @@ const data = {
   admin: [
     {
       name: "Manage Computers",
-      url: "#",
+      url: "/dashboard/manage-computers",
       icon: IconDatabase,
     },
   ],

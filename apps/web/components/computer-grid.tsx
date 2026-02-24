@@ -10,6 +10,7 @@ import { CenteredLoading } from "./centered-loading";
 
 export function ComputerGrid() {
   const computers = useQuery(api.computers.list);
+  const rooms = useQuery(api.rooms.list);
   const [cachedCount, setCachedCount] = useState<number | null>(null);
 
   useEffect(() => {
@@ -38,20 +39,72 @@ export function ComputerGrid() {
     );
   }
 
-  // Use either the actual fetched computers or fake ones for the skeleton based on cached count
-  const renderItems = computers || Array.from({ length: cachedCount || 3 });
+  // Create groupings
+  const groupedComputers: Record<string, any[]> = {};
+  const unassigned: any[] = [];
+
+  if (computers) {
+    computers.forEach((comp) => {
+      if (comp.roomId && rooms?.find((r) => r._id === comp.roomId)) {
+        if (!groupedComputers[comp.roomId]) groupedComputers[comp.roomId] = [];
+        groupedComputers[comp.roomId].push(comp);
+      } else {
+        unassigned.push(comp);
+      }
+    });
+  }
 
   return (
-    <div className="@container">
-      <div className="grid gap-4 @xs:grid-cols-1 @xl:grid-cols-2 @6xl:grid-cols-3 @7xl:grid-cols-3">
-        {renderItems.map((item, index) =>
-          computers ? (
-            <ComputerCard key={(item as any).id} computer={item as any} />
-          ) : (
+    <div className="flex flex-col gap-10 @container">
+      {/* Grouped Rooms */}
+      {rooms?.map((room) => {
+        const roomComputers = groupedComputers[room._id];
+        if (!roomComputers?.length) return null;
+
+        return (
+          <div key={room._id} className="flex flex-col gap-4">
+            <div className="flex items-center gap-2">
+              <div className="h-4 w-1 rounded-full bg-emerald-500" />
+              <h2 className="text-lg font-semibold tracking-tight">{room.name}</h2>
+              <span className="text-muted-foreground text-xs font-medium ml-1">
+                {roomComputers.length} {roomComputers.length === 1 ? "Device" : "Devices"}
+              </span>
+            </div>
+            <div className="grid gap-4 @xs:grid-cols-1 @xl:grid-cols-2 @6xl:grid-cols-3 @7xl:grid-cols-3">
+              {roomComputers.map((item) => (
+                <ComputerCard key={item.id} computer={item} />
+              ))}
+            </div>
+          </div>
+        );
+      })}
+
+      {/* Unassigned Group */}
+      {unassigned.length > 0 && (
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center gap-2">
+            <div className="h-4 w-1 rounded-full bg-slate-500" />
+            <h2 className="text-lg font-semibold tracking-tight">Unassigned</h2>
+            <span className="text-muted-foreground text-xs font-medium ml-1">
+              {unassigned.length} {unassigned.length === 1 ? "Device" : "Devices"}
+            </span>
+          </div>
+          <div className="grid gap-4 @xs:grid-cols-1 @xl:grid-cols-2 @6xl:grid-cols-3 @7xl:grid-cols-3">
+            {unassigned.map((item) => (
+              <ComputerCard key={item.id} computer={item} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Loading Skeletons */}
+      {computers === undefined && cachedCount !== null && (
+        <div className="grid gap-4 @xs:grid-cols-1 @xl:grid-cols-2 @6xl:grid-cols-3 @7xl:grid-cols-3">
+          {Array.from({ length: cachedCount }).map((_, index) => (
             <ComputerSkeleton key={index} />
-          ),
-        )}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
