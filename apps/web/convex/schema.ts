@@ -26,4 +26,26 @@ export default defineSchema({
   })
     .index("by_orgId", ["orgId"])
     .index("by_name", ["name"]),
+
+  surveys: defineTable({
+    title: v.string(),
+    orgId: v.string(),
+    status: v.union(v.literal("active"), v.literal("draft")),
+    createdAt: v.number(),
+    steps: v.array(
+      v.object({
+        id: v.string(),
+        type: v.union(
+          v.literal("star_rating"),
+          v.literal("open_paragraph"),
+          v.literal("multiple_choice")
+        ),
+        question: v.string(),
+        required: v.boolean(),
+        options: v.optional(v.array(v.string())),
+      })
+    ),
+  })
+    .index("by_orgId", ["orgId"])
+    .index("by_status", ["status"]),
 });

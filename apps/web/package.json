@@ -18,6 +18,7 @@
     "@monexa/types": "workspace:*",
     "@tabler/icons-react": "^3.37.1",
     "@tanstack/react-table": "^8.21.3",
+    "@types/uuid": "^11.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "convex": "^1.32.0",
@@ -30,6 +31,7 @@
     "recharts": "2.15.4",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.5.0",
+    "uuid": "^13.0.0",
     "vaul": "^1.1.2",
     "zod": "^4.3.6"
   },
