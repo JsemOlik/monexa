@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { socket } from "./lib/socket";
 import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
@@ -38,14 +38,23 @@ function App() {
   const [isConnected, setIsConnected] = useState(socket.connected);
   const [isBlocked, setIsBlocked] = useState(false);
   const isBlockedWindow = window.location.hash === "#/blocked";
+  const disconnectTimeoutRef = useRef<any>(null);
 
   useEffect(() => {
     function onConnect() {
       setIsConnected(true);
+      if (disconnectTimeoutRef.current) {
+        clearTimeout(disconnectTimeoutRef.current);
+        disconnectTimeoutRef.current = null;
+      }
     }
 
     function onDisconnect() {
       setIsConnected(false);
+      // If we don't reconnect within 10 seconds, close all secondary windows
+      disconnectTimeoutRef.current = setTimeout(() => {
+        invoke("close_secondary_windows").catch(console.error);
+      }, 10000);
     }
 
     function onSetBlocked(blocked: boolean) {
@@ -60,6 +69,9 @@ function App() {
       socket.off("connect", onConnect);
       socket.off("disconnect", onDisconnect);
       socket.off("setBlocked" as any, onSetBlocked);
+      if (disconnectTimeoutRef.current) {
+        clearTimeout(disconnectTimeoutRef.current);
+      }
     };
   }, []);
 

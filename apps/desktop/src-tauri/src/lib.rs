@@ -65,6 +65,30 @@ async fn toggle_block_window(
     Ok(())
 }
 
+#[tauri::command]
+async fn close_secondary_windows(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, AppState>,
+) -> Result<(), String> {
+    // Reset blocked state to prevent self-healing from re-opening windows
+    let mut is_blocked = state.is_blocked.lock().unwrap();
+    *is_blocked = false;
+
+    for window in app.webview_windows().values() {
+        if window.label() != "main" {
+            let _ = window.close();
+        }
+    }
+
+    // Ensure main window is visible
+    if let Some(main_window) = app.get_webview_window("main") {
+        let _ = main_window.show();
+        let _ = main_window.set_focus();
+    }
+
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -136,7 +160,11 @@ pub fn run() {
                 _ => {}
             }
         })
-        .invoke_handler(tauri::generate_handler![greet, toggle_block_window])
+        .invoke_handler(tauri::generate_handler![
+            greet,
+            toggle_block_window,
+            close_secondary_windows
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
