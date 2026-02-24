@@ -75,18 +75,23 @@ export const toggleBlock = mutation({
 export const setOffline = mutation({
   args: {
     id: v.string(),
+    orgId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Unauthorized");
-    const orgId = (identity as any).org_id || identity.orgId || identity.subject;
+    let effectiveOrgId = args.orgId;
+
+    if (!effectiveOrgId) {
+      const identity = await ctx.auth.getUserIdentity();
+      if (!identity) throw new Error("Unauthorized");
+      effectiveOrgId = (identity as any).org_id || identity.orgId || identity.subject;
+    }
 
     const existing = await ctx.db
       .query("computers")
       .withIndex("by_computerId", (q) => q.eq("id", args.id))
       .unique();
 
-    if (existing && existing.orgId === orgId) {
+    if (existing && existing.orgId === effectiveOrgId) {
       await ctx.db.patch(existing._id, {
         status: "offline",
         lastSeen: Date.now(),

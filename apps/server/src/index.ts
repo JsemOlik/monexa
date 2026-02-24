@@ -7,8 +7,8 @@ import type { ClientToServerEvents, ServerToClientEvents } from "@monexa/types";
 const CONVEX_URL = process.env.CONVEX_URL || "https://affable-peacock-307.eu-west-1.convex.cloud";
 const convex = new ConvexClient(CONVEX_URL);
 
-// Map to track active sockets by computer ID
-const activeSockets = new Map<string, Socket>();
+// Map to track active sockets by computer ID (Set for multiple windows)
+const activeSockets = new Map<string, Set<Socket>>();
 
 const httpServer = createServer();
 const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer, {
@@ -19,37 +19,46 @@ const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer, {
 // Subscribe to computer changes in Convex
 convex.onUpdate(api.computers.internalList, {}, (computers: any[]) => {
   for (const computer of computers) {
-    const socket = activeSockets.get(computer.id);
-    if (socket) {
+    const sockets = activeSockets.get(computer.id);
+    if (sockets && sockets.size > 0) {
       // Handle physical disconnection if marked offline
       if (computer.status === "offline") {
         console.log(`[${new Date().toISOString()}] Forcefully disconnecting computer: ${computer.name} (${computer.id})`);
-        socket.disconnect(true);
+        for (const s of sockets) s.disconnect(true);
         activeSockets.delete(computer.id);
         continue;
       }
 
       // Handle real-time blocking
       const isBlocked = !!computer.isBlocked;
-      const socketTyped = socket as any; // Temporary cast for custom props
-      if (socketTyped.isBlocked !== isBlocked) {
-        console.log(`[${new Date().toISOString()}] Toggling block state for: ${computer.name} (${computer.id}) to ${isBlocked}`);
-        socketTyped.isBlocked = isBlocked;
-        socket.emit("setBlocked", isBlocked);
-      }
+      // We can broadcast to the room for blocking
+      io.to(computer.id).emit("setBlocked", isBlocked);
     }
   }
 });
 
-io.on("connection", (socket) => {
+io.on("connection", async (socket) => {
   console.log(`[${new Date().toISOString()}] Socket connected: ${socket.id}`);
 
-  let computerId: string | undefined; // Declare computerId here to be accessible by all handlers for this socket
+  // Immediate identification via handshake
+  const { computerId: hsId, orgId: hsOrgId } = socket.handshake.auth as { computerId?: string, orgId?: string };
+  let computerId: string | undefined = hsId;
+
+  if (computerId && hsOrgId) {
+    console.log(`[${new Date().toISOString()}] Handshake ID detected: ${computerId} (Org: ${hsOrgId})`);
+    (socket as any).computerId = computerId;
+    (socket as any).orgId = hsOrgId;
+    
+    socket.join(computerId);
+    if (!activeSockets.has(computerId)) {
+      activeSockets.set(computerId, new Set());
+    }
+    activeSockets.get(computerId)!.add(socket);
+  }
 
   socket.on("registerComputer", async (data) => {
-    console.log(`[${new Date().toISOString()}] Registering computer: ${data.name} (${data.id}) on ${data.os} (Org: ${data.orgId})`);
+    console.log(`[${new Date().toISOString()}] Registering computer: ${data.name} (${data.id}) [Socket: ${socket.id}]`);
     try {
-      // Security: Validate Org ID exists before proceding
       const orgCheck = await convex.query(api.computers.validateOrg, { id: data.orgId });
       if (!orgCheck.isValid) {
         console.warn(`[${new Date().toISOString()}] REJECTED registration for ${data.id}: Invalid Org ID ${data.orgId}`);
@@ -63,20 +72,25 @@ io.on("connection", (socket) => {
         os: data.os,
         orgId: data.orgId,
       }) as { isBlocked: boolean };
-      
-      console.log(`[${new Date().toISOString()}] Registration successful for: ${data.id}. Block status: ${result.isBlocked}`);
-      
-      // Store computerId, orgId, and block state for this socket
+
+      console.log(`[${new Date().toISOString()}] Registration success for: ${data.id}. Blocked: ${result.isBlocked}`);
+
       computerId = data.id;
       (socket as any).computerId = data.id;
       (socket as any).orgId = data.orgId;
       (socket as any).isBlocked = result.isBlocked;
-      activeSockets.set(data.id, socket);
+      
+      // Join the computer-specific room
+      socket.join(data.id);
+      
+      // Track in activeSockets
+      if (!activeSockets.has(data.id)) {
+        activeSockets.set(data.id, new Set());
+      }
+      activeSockets.get(data.id)!.add(socket);
 
-      // Immediately apply block state if needed (handshake/offline-first)
       if (result.isBlocked) {
-        console.log(`[${new Date().toISOString()}] Immediately blocking computer per registration handshake: ${data.id}`);
-        socket.emit("setBlocked" as any, true);
+        socket.emit("setBlocked", true);
       }
     } catch (error) {
       console.error(`[${new Date().toISOString()}] Registration failed for ${data.id}:`, error);
@@ -96,7 +110,6 @@ io.on("connection", (socket) => {
   socket.on("heartbeat", async () => {
     if (computerId) {
       const orgId = (socket as any).orgId;
-      // console.log(`[${new Date().toISOString()}] Heartbeat from: ${computerId}`);
       try {
         await convex.mutation(api.computers.heartbeat, { id: computerId, orgId });
       } catch (error) {
@@ -105,48 +118,119 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("launchSurvey", async (data: { surveyId: string, targets: string[] }) => {
-    console.log(`[${new Date().toISOString()}] RECEIVED launchSurvey for ${data.surveyId}. Targets: ${data.targets.length}`);
-    
+  // Called when admin launches a survey (prep/waiting mode)
+  socket.on("launchSurvey", async (data: { surveyId: string; launchId: string; targets: string[] }) => {
+    console.log(`[${new Date().toISOString()}] launchSurvey for ${data.surveyId}. Targets: ${data.targets.length}`);
+
+    let surveyTitle = "Survey";
+    try {
+      const survey = await convex.query(api.surveys.getInternal, { id: data.surveyId as any });
+      surveyTitle = survey?.title ?? "Survey";
+    } catch (_) {}
+
     for (const targetId of data.targets) {
-      const targetSocket = activeSockets.get(targetId);
-      if (targetSocket) {
-        console.log(`[${new Date().toISOString()}] ROUTING surveyLaunch to ${targetId} (Socket: ${targetSocket.id})`);
-        targetSocket.emit("surveyLaunch", { surveyId: data.surveyId });
+      if (activeSockets.has(targetId)) {
+        console.log(`[${new Date().toISOString()}] Broadcasting surveyLaunch to room ${targetId}`);
+        io.to(targetId).emit("surveyLaunch", {
+          surveyId: data.surveyId,
+          launchId: data.launchId,
+          surveyTitle,
+        });
       } else {
-        console.warn(`[${new Date().toISOString()}] SKIPPING ${targetId}: No active socket found`);
+        console.warn(`[${new Date().toISOString()}] SKIPPING ${targetId}: No active sockets in room`);
       }
     }
   });
 
+  // Called when admin clicks "Start" — computers show the actual questions
+  socket.on("startSurvey", async (data: { launchId: string; survey: any; targets: string[] }) => {
+    console.log(`[${new Date().toISOString()}] startSurvey for launchId: ${data.launchId}. Targets: ${data.targets?.length ?? 0}`);
+    try {
+      const { survey, targets, launchId } = data;
+      if (!survey || !targets) return;
+
+      for (const targetId of targets) {
+        // Debug room membership
+        const roomSockets = await io.in(targetId).fetchSockets();
+        console.log(`[${new Date().toISOString()}] Room ${targetId} has ${roomSockets.length} socket(s) joined.`);
+        
+        if (roomSockets.length > 0) {
+          console.log(`[${new Date().toISOString()}] Broadcasting surveyStart to room ${targetId}`);
+          io.to(targetId).emit("surveyStart", {
+            surveyId: survey._id,
+            launchId: launchId,
+            steps: survey.steps,
+          });
+        } else {
+          console.warn(`[${new Date().toISOString()}] Room ${targetId} is EMPTY. Fallback check activeSockets: ${activeSockets.has(targetId)}`);
+          // Fallback: If room is empty for some reason, but we have sockets, force them to join
+          const sockets = activeSockets.get(targetId);
+          if (sockets) {
+            console.log(`[${new Date().toISOString()}] FORCING ${sockets.size} sockets to join room ${targetId}`);
+            for (const s of sockets) {
+               s.join(targetId);
+               s.emit("surveyStart", {
+                  surveyId: survey._id,
+                  launchId: launchId,
+                  steps: survey.steps,
+               });
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error(`[${new Date().toISOString()}] startSurvey failed:`, error);
+    }
+  });
+
+  // Called when a computer submits its survey responses
+  socket.on("submitSurveyResponse", async (data: { launchId: string; surveyId: string; answers: { questionId: string; value: string }[] }) => {
+    const cId = (socket as any).computerId;
+    console.log(`[${new Date().toISOString()}] submitSurveyResponse from ${cId} [Socket: ${socket.id}]`);
+    try {
+      await convex.mutation(api.surveyResponses.submit, {
+        launchId: data.launchId as any,
+        surveyId: data.surveyId as any,
+        computerHostname: cId ?? "unknown",
+        answers: data.answers,
+      });
+    } catch (error) {
+      console.error(`[${new Date().toISOString()}] Failed to save response from ${cId}:`, error);
+    }
+  });
+
   socket.on("setSurveying", async (isSurveying: boolean) => {
-    const computerId = (socket as any).computerId;
+    const cId = (socket as any).computerId;
     const orgId = (socket as any).orgId;
-    if (computerId && orgId) {
-      console.log(`[${new Date().toISOString()}] Survey status changed for ${computerId}: ${isSurveying}`);
+    if (cId && orgId) {
       try {
-        await convex.mutation(api.computers.setSurveying, { 
-          id: computerId, 
-          orgId, 
-          isSurveying 
-        });
+        await convex.mutation(api.computers.setSurveying, { id: cId, orgId, isSurveying });
       } catch (error) {
-        console.error(`[${new Date().toISOString()}] Failed to set surveying for ${computerId}:`, error);
+        console.error(`[${new Date().toISOString()}] Failed to set surveying for ${cId}:`, error);
       }
     }
   });
 
   socket.on("disconnect", async (reason) => {
-    const computerId = (socket as any).computerId;
+    const cId = (socket as any).computerId;
     console.log(`[${new Date().toISOString()}] Socket disconnected: ${socket.id} (Reason: ${reason})`);
-    if (computerId) {
-      activeSockets.delete(computerId);
-      console.log(`[${new Date().toISOString()}] Setting computer offline: ${computerId}`);
-      try {
-        await convex.mutation(api.computers.setOffline, { id: computerId });
-        console.log(`[${new Date().toISOString()}] Successfully set offline: ${computerId}`);
-      } catch (error) {
-        console.error(`[${new Date().toISOString()}] Failed to set offline for ${computerId}:`, error);
+    
+    if (cId) {
+      const sockets = activeSockets.get(cId);
+      if (sockets) {
+        sockets.delete(socket);
+        if (sockets.size === 0) {
+          activeSockets.delete(cId);
+          console.log(`[${new Date().toISOString()}] Last socket for ${cId} gone. Setting computer offline.`);
+          try {
+            const orgId = (socket as any).orgId;
+            await convex.mutation(api.computers.setOffline, { id: cId, orgId });
+          } catch (error) {
+            console.error(`[${new Date().toISOString()}] Failed to set offline for ${cId}:`, error);
+          }
+        } else {
+          console.log(`[${new Date().toISOString()}] ${sockets.size} sockets still active for ${cId}`);
+        }
       }
     }
   });

@@ -47,7 +47,7 @@ export function LaunchSurveyWizard({
   const surveys = useQuery(api.surveys.list);
   const rooms = useQuery(api.rooms.list);
   const computers = useQuery(api.computers.list);
-  const createLaunch = useMutation(api.launches.create);
+  const createLaunch = useMutation(api.surveyLaunches.create);
 
   const handleLaunch = async () => {
     if (!selectedSurveyId) return;
@@ -72,20 +72,23 @@ export function LaunchSurveyWizard({
 
     setLoading(true);
     try {
-      await createLaunch({
+      const launchId = await createLaunch({
         surveyId: selectedSurveyId as any,
         targets,
       });
 
+      const survey = surveys?.find((s) => s._id === selectedSurveyId);
+      const surveyTitle = survey?.title || "Survey";
+
       console.log(
-        `[LaunchWizard] Emitting launchSurvey to ${targets.length} targets:`,
-        targets,
+        `[LaunchWizard] Emitting launchSurvey for launch ${launchId} to ${targets.length} targets.`,
       );
       const { socket } = await import("@/lib/socket");
       socket.emit("launchSurvey", {
         surveyId: selectedSurveyId,
+        launchId,
         targets,
-      });
+      } as any);
 
       toast.success("Survey launched successfully!");
       onOpenChange(false);

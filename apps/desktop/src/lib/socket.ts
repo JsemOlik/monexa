@@ -7,6 +7,11 @@ const SERVER_URL = "http://localhost:3001";
 export const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io(SERVER_URL, {
   autoConnect: false,
   path: "/client",
+  auth: async (cb) => {
+    const orgId = localStorage.getItem("monexa_org_id");
+    const hostname = (await getHostname()) ?? "unknown-host";
+    cb({ computerId: hostname, orgId });
+  }
 });
 
 export async function initSocket() {

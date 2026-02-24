@@ -25,10 +25,11 @@ fn create_survey_window(app: &AppHandle) -> Result<(), String> {
             tauri::WebviewUrl::App("index.html#/survey".into()),
         )
         .title("Monexa - Survey")
-        .fullscreen(true)
+        .fullscreen(false)
+        .inner_size(800.0, 600.0)
         .always_on_top(true)
-        .decorations(false)
-        .resizable(false)
+        .decorations(true)
+        .resizable(true)
         .visible(true)
         .build()
         .map_err(|e| e.to_string())?;
@@ -55,10 +56,11 @@ fn create_blocked_window(app: &AppHandle) -> Result<(), String> {
             tauri::WebviewUrl::App("index.html#/blocked".into()),
         )
         .title("Monexa - Blocked")
-        .fullscreen(true)
+        .fullscreen(false)
+        .inner_size(800.0, 600.0)
         .always_on_top(true)
-        .decorations(false)
-        .resizable(false)
+        .decorations(true)
+        .resizable(true)
         .visible(true)
         .build()
         .map_err(|e| e.to_string())?;

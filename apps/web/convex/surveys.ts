@@ -121,3 +121,11 @@ export const update = mutation({
     });
   },
 });
+
+// Public query for server-side use (no auth required — reads by ID only)
+export const getInternal = query({
+  args: { id: v.id("surveys") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.id);
+  },
+});

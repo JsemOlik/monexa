@@ -54,9 +54,27 @@ export default defineSchema({
     surveyId: v.id("surveys"),
     orgId: v.string(),
     targets: v.array(v.string()), // list of computer IDs
-    status: v.union(v.literal("active"), v.literal("completed")),
+    status: v.union(v.literal("pending"), v.literal("started"), v.literal("completed")),
     launchedAt: v.number(),
   })
     .index("by_orgId", ["orgId"])
-    .index("by_surveyId", ["surveyId"]),
+    .index("by_surveyId", ["surveyId"])
+    .index("by_status", ["status"]),
+
+  surveyResponses: defineTable({
+    launchId: v.id("surveyLaunches"),
+    surveyId: v.id("surveys"),
+    orgId: v.string(),
+    computerHostname: v.string(),
+    submittedAt: v.number(),
+    answers: v.array(
+      v.object({
+        questionId: v.string(),
+        value: v.string(), // stringified for all types (star → "4", text → "...", mc → "Option A")
+      })
+    ),
+  })
+    .index("by_launchId", ["launchId"])
+    .index("by_surveyId", ["surveyId"])
+    .index("by_orgId", ["orgId"]),
 });

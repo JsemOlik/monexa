@@ -9,7 +9,124 @@ import {
   type as getOsType,
   hostname as getHostname,
 } from "@tauri-apps/plugin-os";
+// Inline Icons to avoid dependency resolution issues in Tauri
+function IconStar({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <path d="M12 17.75l-6.172 3.245 1.179-6.873-4.993-4.867 6.9-1.002L12 2l3.086 6.253 6.9 1.002-4.993 4.867 1.179 6.873z" />
+    </svg>
+  );
+}
+
+function IconStarFilled({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <path d="M12 17.75l-6.172 3.245 1.179-6.873-4.993-4.867 6.9-1.002L12 2l3.086 6.253 6.9 1.002-4.993 4.867 1.179 6.873z" />
+    </svg>
+  );
+}
+
+function IconChevronRight({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <path d="m9 18 6-6-6-6" />
+    </svg>
+  );
+}
+
+function IconCheck({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
+  );
+}
 import "./App.css";
+
+// Utility for class merging
+function cn(...classes: (string | boolean | undefined)[]) {
+  return classes.filter(Boolean).join(" ");
+}
+
+// Simple Button component for Desktop
+function Button({ children, onClick, disabled, className }: any) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={cn(
+        "inline-flex items-center justify-center transition-all disabled:opacity-50 disabled:cursor-not-allowed",
+        className,
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+// Simple Badge component for Desktop
+function Badge({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold",
+        className,
+      )}
+    >
+      {children}
+    </div>
+  );
+}
 
 function BlockedContent() {
   return (
@@ -46,22 +163,297 @@ function BlockedContent() {
   );
 }
 
-function SurveyContent() {
+function SurveyContent({ computerHostname }: { computerHostname: string }) {
+  const [mode, setMode] = useState<"prep" | "active" | "done">("prep");
+  const [surveyData, setSurveyData] = useState<{
+    id: string;
+    launchId: string;
+    title: string;
+    steps: any[];
+  } | null>(null);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
+
   useEffect(() => {
-    // When the survey window unmounts, notify the main window via Tauri IPC
-    // so it can emit setSurveying(false) on its registered socket
+    // Try to load initial prep state from localStorage (pass from main window)
+    const saved = localStorage.getItem("monexa_active_survey");
+    if (saved) {
+      try {
+        const data = JSON.parse(saved);
+        console.log(
+          "[SURVEY] Loading initial state from storage:",
+          data.surveyTitle,
+        );
+        setSurveyData({
+          id: data.surveyId,
+          launchId: data.launchId,
+          title: data.surveyTitle,
+          steps: [],
+        });
+        setMode("prep");
+      } catch (e) {
+        console.error("[SURVEY] Failed to parse saved survey state", e);
+      }
+    }
+
+    const handleStart = (data: {
+      surveyId: string;
+      launchId: string;
+      steps: any[];
+    }) => {
+      console.log(
+        `[SURVEY] Start trigger processed. Steps: ${data.steps?.length ?? 0}`,
+      );
+      setSurveyData((prev) => {
+        return {
+          id: data.surveyId,
+          launchId: data.launchId,
+          title: prev?.title || "Survey",
+          steps: data.steps,
+        };
+      });
+      setMode("active");
+      setCurrentStepIndex(0);
+      setAnswers({});
+    };
+
+    const handleLaunch = (data: {
+      surveyId: string;
+      launchId: string;
+      surveyTitle: string;
+    }) => {
+      console.log(`[SURVEY] Launch trigger processed: ${data.surveyTitle}`);
+      setSurveyData({
+        id: data.surveyId,
+        launchId: data.launchId,
+        title: data.surveyTitle,
+        steps: [],
+      });
+      setMode("prep");
+    };
+
+    // Listen ONLY for triggers from Tauri events (sent by the primary or secondary window's App component)
+    const unlistenLaunch = tauriListen("survey-launch-trigger", (event) => {
+      console.log("[SURVEY] Tauri: Received survey-launch-trigger");
+      handleLaunch(event.payload as any);
+    });
+
+    const unlistenStart = tauriListen("survey-start-trigger", (event) => {
+      console.log("[SURVEY] Tauri: Received survey-start-trigger");
+      handleStart(event.payload as any);
+    });
+
     return () => {
+      unlistenLaunch.then((fn) => fn());
+      unlistenStart.then((fn) => fn());
       console.log("[SURVEY] Emitting survey-closed Tauri event...");
       tauriEmit("survey-closed", {}).catch(console.error);
     };
   }, []);
 
-  return (
-    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-zinc-950 text-white cursor-none">
-      <div className="animate-in fade-in zoom-in duration-1000">
-        <h1 className="text-6xl font-black tracking-tighter uppercase italic text-emerald-500 shadow-[0_0_30px_rgba(16,185,129,0.3)]">
-          Survey
+  const handleNext = async () => {
+    if (!surveyData) return;
+
+    if (currentStepIndex < surveyData.steps.length - 1) {
+      setCurrentStepIndex((prev) => prev + 1);
+    } else {
+      setSubmitting(true);
+      const formattedAnswers = Object.entries(answers).map(([id, val]) => ({
+        questionId: id,
+        value: val,
+      }));
+
+      console.log(
+        `[SURVEY] Submitting for ${computerHostname}:`,
+        formattedAnswers,
+      );
+      socket.emit("submitSurveyResponse", {
+        launchId: surveyData.launchId,
+        surveyId: surveyData.id,
+        answers: formattedAnswers,
+      } as any);
+
+      setMode("done");
+      setTimeout(() => {
+        invoke("toggle_survey_window", { open: false }).catch(console.error);
+      }, 2000);
+    }
+  };
+
+  if (mode === "done") {
+    return (
+      <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-zinc-950 text-white p-12 text-center">
+        <div className="size-20 bg-emerald-500/20 rounded-full flex items-center justify-center mb-6 animate-in zoom-in duration-500">
+          <IconCheck className="size-10 text-emerald-500" />
+        </div>
+        <h1 className="text-4xl font-black italic uppercase tracking-tighter text-emerald-500 mb-2 font-sans">
+          Hotovo!
         </h1>
+        <p className="text-zinc-400 text-lg">Děkujeme za tvůj čas.</p>
+      </div>
+    );
+  }
+
+  if (mode === "prep" || !surveyData) {
+    return (
+      <div
+        data-tauri-drag-region
+        className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-zinc-950 text-white p-12 text-center"
+      >
+        <button
+          onClick={() => setMode("active")}
+          style={{ cursor: "pointer" }}
+          className="absolute top-4 right-4 size-4 bg-white/5 rounded-full opacity-0 hover:opacity-100 transition-opacity z-[10000]"
+        >
+          .
+        </button>
+        <div className="max-w-2xl space-y-8 animate-in fade-in zoom-in duration-1000">
+          <div className="space-y-2">
+            <p className="text-emerald-500/50 font-bold uppercase tracking-[0.2em] text-sm">
+              Připravujeme dotazník
+            </p>
+            <h1 className="text-6xl font-black tracking-tighter uppercase italic text-white font-sans">
+              {surveyData?.title || "Načítání..."}
+            </h1>
+          </div>
+          <p className="text-zinc-400 text-2xl font-medium leading-relaxed">
+            Posad se a nic nedelej, administrator ti za chvilku spusti dotaznik
+            :)
+          </p>
+          <div className="flex justify-center gap-1">
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                className="size-2 rounded-full bg-emerald-500/50 animate-bounce"
+                style={{ animationDelay: `${i * 0.2}s` }}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const currentStep = surveyData.steps[currentStepIndex];
+  const progress = ((currentStepIndex + 1) / surveyData.steps.length) * 100;
+
+  return (
+    <div
+      data-tauri-drag-region
+      className="fixed inset-0 z-[9999] flex flex-col bg-zinc-950 text-white p-16"
+    >
+      <div className="absolute top-0 left-0 w-full h-1.5 bg-white/5">
+        <div
+          className="h-full bg-emerald-500 transition-all duration-500"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+
+      <div className="max-w-4xl mx-auto w-full flex-1 flex flex-col justify-center gap-12 animate-in slide-in-from-bottom-8 duration-700">
+        <div className="space-y-4">
+          <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 px-3 py-1 text-sm font-bold uppercase tracking-widest rounded-lg">
+            Otázka {currentStepIndex + 1} z {surveyData.steps.length}
+          </Badge>
+          <h2 className="text-5xl font-black tracking-tight leading-tight">
+            {currentStep.question}
+          </h2>
+        </div>
+
+        <div className="flex-1 min-h-[300px]">
+          {currentStep.type === "star_rating" && (
+            <div className="flex gap-4">
+              {[1, 2, 3, 4, 5].map((rating) => {
+                const isSelected = Number(answers[currentStep.id]) === rating;
+                return (
+                  <button
+                    key={rating}
+                    onClick={() =>
+                      setAnswers((prev) => ({
+                        ...prev,
+                        [currentStep.id]: rating.toString(),
+                      }))
+                    }
+                    className={cn(
+                      "size-20 rounded-2xl flex items-center justify-center transition-all duration-200 border-2",
+                      isSelected
+                        ? "bg-emerald-500 border-emerald-400 text-white shadow-[0_0_30px_rgba(16,185,129,0.4)] scale-110"
+                        : "bg-white/5 border-white/5 hover:bg-white/10 text-zinc-500",
+                    )}
+                  >
+                    {isSelected ? (
+                      <IconStarFilled className="size-10" />
+                    ) : (
+                      <IconStar className="size-10" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {currentStep.type === "open_paragraph" && (
+            <textarea
+              autoFocus
+              className="w-full bg-white/5 border-2 border-white/5 focus:border-emerald-500/50 rounded-3xl p-8 text-2xl outline-none transition-all min-h-[250px] resize-none placeholder:text-zinc-700 font-sans"
+              placeholder="Tvoje odpověď..."
+              value={answers[currentStep.id] || ""}
+              onChange={(e) =>
+                setAnswers((prev) => ({
+                  ...prev,
+                  [currentStep.id]: e.target.value,
+                }))
+              }
+            />
+          )}
+
+          {currentStep.type === "multiple_choice" && (
+            <div className="grid grid-cols-2 gap-4">
+              {currentStep.options?.map((option: string) => (
+                <button
+                  key={option}
+                  onClick={() =>
+                    setAnswers((prev) => ({
+                      ...prev,
+                      [currentStep.id]: option,
+                    }))
+                  }
+                  className={cn(
+                    "p-6 rounded-2xl border-2 text-left text-xl font-bold transition-all",
+                    answers[currentStep.id] === option
+                      ? "bg-emerald-500 border-emerald-400 text-white shadow-[0_0_20px_rgba(16,185,129,0.3)]"
+                      : "bg-white/5 border-white/5 hover:bg-white/10 text-zinc-400",
+                  )}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="flex justify-end pt-8 border-t border-white/5">
+          <Button
+            size="lg"
+            onClick={handleNext}
+            disabled={
+              submitting ||
+              (currentStep.required && !answers[currentStep.id]?.trim())
+            }
+            className="h-20 px-12 rounded-3xl bg-emerald-500 hover:bg-emerald-600 text-white text-2xl font-black uppercase italic tracking-tighter shadow-[0_0_40px_rgba(16,185,129,0.4)]"
+          >
+            {currentStepIndex < surveyData.steps.length - 1 ? (
+              <>
+                Další <IconChevronRight className="ml-3 size-8" />
+              </>
+            ) : (
+              <>
+                {submitting ? "Odesílám..." : "Odeslat"}
+                <IconCheck className="ml-3 size-8" />
+              </>
+            )}
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -70,6 +462,7 @@ function SurveyContent() {
 function App() {
   const [isConnected, setIsConnected] = useState(socket.connected);
   const [isBlocked, setIsBlocked] = useState(false);
+  const [hostname, setHostname] = useState("unknown-host");
   const [orgId, setOrgId] = useState<string | null>(
     localStorage.getItem("monexa_org_id"),
   );
@@ -81,6 +474,22 @@ function App() {
   const isSurveyWindow = window.location.hash === "#/survey";
   const disconnectTimeoutRef = useRef<any>(null);
 
+  const registerIdentity = async () => {
+    if (!orgId) return;
+    const os = (await getOsType()) ?? "unknown";
+    const hName = (await getHostname()) ?? "unknown-host";
+    setHostname(hName);
+    console.log(
+      `[SOCKET] Registering identity: ${hName} (OS: ${os}, Org: ${orgId})`,
+    );
+    socket.emit("registerComputer", {
+      id: hName,
+      name: hName,
+      os,
+      orgId: orgId,
+    });
+  };
+
   useEffect(() => {
     function onConnect() {
       setIsConnected(true);
@@ -88,24 +497,7 @@ function App() {
         clearTimeout(disconnectTimeoutRef.current);
         disconnectTimeoutRef.current = null;
       }
-
-      // Register with orgId if we have it
-      if (orgId) {
-        (async () => {
-          const os = (await getOsType()) ?? "unknown";
-          const hostname = (await getHostname()) ?? "unknown-host";
-          console.log(
-            `[SOCKET] Registering dynamic identity: ${hostname} (OS: ${os}, Org: ${orgId})`,
-          );
-
-          socket.emit("registerComputer", {
-            id: hostname,
-            name: hostname,
-            os,
-            orgId: orgId,
-          });
-        })();
-      }
+      registerIdentity();
     }
 
     function onDisconnect() {
@@ -119,37 +511,38 @@ function App() {
       setIsBlocked(blocked);
     }
 
-    function onSurveyLaunch(data: { surveyId: string }) {
+    function onSurveyLaunch(data: any) {
       console.log(
         `[SOCKET] SURVEY_LAUNCH received! Survey ID: ${data.surveyId}`,
       );
-      // Emit setSurveying on the main window's registered socket BEFORE opening the window
-      console.log("[SOCKET] Emitting setSurveying(true) from main window...");
+      // Pass data to survey window via localStorage
+      localStorage.setItem("monexa_active_survey", JSON.stringify(data));
       socket.emit("setSurveying", true);
-
-      console.log("[TAURI] Invoking toggle_survey_window(open=true)...");
-      invoke("toggle_survey_window", { open: true })
-        .then(() => console.log("[TAURI] toggle_survey_window SUCCESS"))
-        .catch((err) => {
-          console.error("[TAURI] toggle_survey_window FAILED:", err);
-        });
+      invoke("toggle_survey_window", { open: true }).catch(console.error);
+      // Also forward to secondary window if it's already open
+      tauriEmit("survey-launch-trigger", data).catch(console.error);
     }
 
-    // Listen for survey-closed Tauri event from the survey window
-    // The survey window cannot use the socket directly (unregistered), so it fires this event
-    const unlistenSurveyClosed = tauriListen("survey-closed", () => {
+    function onSurveyStart(data: any) {
       console.log(
-        "[TAURI] survey-closed received → emitting setSurveying(false)",
+        "[SOCKET] SURVEY_START received! Forwarding to survey window...",
       );
+      tauriEmit("survey-start-trigger", data).catch(console.error);
+    }
+
+    const unlistenSurveyClosed = tauriListen("survey-closed", () => {
+      console.log("[TAURI] survey-closed received → refreshing primary socket");
       socket.emit("setSurveying", false);
+      // Re-register to ensure main window is the primary socket for this computer
+      registerIdentity();
     });
 
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
     socket.on("setBlocked", onSetBlocked);
     socket.on("surveyLaunch", onSurveyLaunch);
+    socket.on("surveyStart", onSurveyStart);
 
-    // Initial registration if already connected
     if (socket.connected && orgId) {
       onConnect();
     }
@@ -159,6 +552,7 @@ function App() {
       socket.off("disconnect", onDisconnect);
       socket.off("setBlocked", onSetBlocked);
       socket.off("surveyLaunch", onSurveyLaunch);
+      socket.off("surveyStart", onSurveyStart);
       unlistenSurveyClosed.then((fn) => fn());
       if (disconnectTimeoutRef.current) {
         clearTimeout(disconnectTimeoutRef.current);
@@ -166,18 +560,14 @@ function App() {
     };
   }, [orgId]);
 
-  // Heartbeat loop
   useEffect(() => {
     if (!isConnected || !orgId) return;
-
     const interval = setInterval(() => {
       socket.emit("heartbeat");
     }, 10000);
-
     return () => clearInterval(interval);
   }, [isConnected, orgId]);
 
-  // Sync blocked state with Rust window manager
   useEffect(() => {
     if (!isBlockedWindow) {
       invoke("toggle_block_window", { blocked: isBlocked }).catch(
@@ -191,7 +581,7 @@ function App() {
   }
 
   if (isSurveyWindow) {
-    return <SurveyContent />;
+    return <SurveyContent computerHostname={hostname} />;
   }
 
   if (!orgId) {
@@ -234,7 +624,7 @@ function App() {
                 socket.emit(
                   "validateOrg",
                   { orgId: tempOrgId.trim() },
-                  (res: { isValid: boolean }) => {
+                  (res: any) => {
                     setIsValidating(false);
                     if (res.isValid) {
                       localStorage.setItem("monexa_org_id", tempOrgId.trim());
@@ -246,7 +636,7 @@ function App() {
                 );
               }
             }}
-            className="w-full py-2 font-medium text-black transition-colors rounded-md bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-900 disabled:text-zinc-500"
+            className="w-full py-2 font-medium text-black transition-colors rounded-md bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-900"
           >
             {isValidating ? "Validating..." : "Connect"}
           </button>
@@ -260,18 +650,17 @@ function App() {
       <h1 className="m-0 text-2xl font-bold tracking-tight text-white">
         Monexa
       </h1>
-
       <p className="text-xs text-zinc-500 font-mono">
         Org: {orgId.substring(0, 8)}...
       </p>
-
       <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5">
         <div
-          className={`h-2 w-2 rounded-full transition-[background-color,box-shadow] duration-300 ease-in-out ${
+          className={cn(
+            "h-2 w-2 rounded-full transition-all duration-300",
             isConnected
-              ? "bg-[#10a37f] shadow-[0_0_8px_rgba(16,163,127,0.6)]"
-              : "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]"
-          }`}
+              ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]"
+              : "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]",
+          )}
         />
         <span className="text-[13px] font-medium text-zinc-400">
           {isConnected ? "Connected to Server" : "Disconnected"}
@@ -279,7 +668,7 @@ function App() {
       </div>
       {!isConnected && (
         <button
-          className="mt-3 cursor-pointer rounded-md border border-white/20 bg-white/10 px-4 py-1.5 text-[13px] font-medium text-[#eeeeee] outline-none transition-all duration-200 ease-in-out hover:border-white/30 hover:bg-white/15 active:translate-y-[1px] active:bg-white/5"
+          className="mt-3 rounded-md border border-white/20 bg-white/10 px-4 py-1.5 text-[13px]"
           onClick={() => socket.connect()}
         >
           Reconnect

@@ -10,9 +10,10 @@
 
 import type * as computers from "../computers.js";
 import type * as http from "../http.js";
-import type * as launches from "../launches.js";
 import type * as organizations from "../organizations.js";
 import type * as rooms from "../rooms.js";
+import type * as surveyLaunches from "../surveyLaunches.js";
+import type * as surveyResponses from "../surveyResponses.js";
 import type * as surveys from "../surveys.js";
 
 import type {
@@ -24,9 +25,10 @@ import type {
 declare const fullApi: ApiFromModules<{
   computers: typeof computers;
   http: typeof http;
-  launches: typeof launches;
   organizations: typeof organizations;
   rooms: typeof rooms;
+  surveyLaunches: typeof surveyLaunches;
+  surveyResponses: typeof surveyResponses;
   surveys: typeof surveys;
 }>;
 

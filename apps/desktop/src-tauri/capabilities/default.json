@@ -1,11 +1,13 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Capability for the main window",
-  "windows": ["main"],
+  "description": "Capability for all windows",
+  "windows": ["main", "survey", "blocked"],
   "permissions": [
     "core:default",
     "opener:default",
+    "core:event:allow-listen",
+    "core:event:allow-emit",
     "os:allow-hostname",
     "os:allow-os-type"
   ]
