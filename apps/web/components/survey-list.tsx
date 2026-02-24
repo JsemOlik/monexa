@@ -31,6 +31,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { useAuth } from "@clerk/nextjs";
 
 export function SurveyList({ searchQuery = "" }: { searchQuery?: string }) {
   const allSurveys = useQuery(api.surveys.list);
@@ -39,6 +40,12 @@ export function SurveyList({ searchQuery = "" }: { searchQuery?: string }) {
   );
   const removeSurvey = useMutation(api.surveys.remove);
   const router = useRouter();
+  const { has } = useAuth();
+
+  const canCreate = has?.({ permission: "org:surveys:create_survey" });
+  const canEdit = has?.({ permission: "org:surveys:edit_survey" });
+  const canDelete = has?.({ permission: "org:surveys:delete_survey" });
+  const canPrep = has?.({ permission: "org:surveys:prep_survey" });
 
   const [launchWizardOpen, setLaunchWizardOpen] = useState(false);
 
@@ -56,23 +63,27 @@ export function SurveyList({ searchQuery = "" }: { searchQuery?: string }) {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-end">
         <div className="flex gap-2">
-          <Button
-            onClick={() => setLaunchWizardOpen(true)}
-            variant="outline"
-            className="border-emerald-500/20 text-emerald-500 hover:bg-emerald-500/5 rounded-xl h-10"
-          >
-            <IconRocket className="mr-2 h-4 w-4" />
-            Launch Survey
-          </Button>
-          <Button
-            asChild
-            className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl h-10"
-          >
-            <Link href="/dashboard/surveys/new">
-              <IconPlus className="mr-2 h-4 w-4" />
-              Create Survey
-            </Link>
-          </Button>
+          {canPrep && (
+            <Button
+              onClick={() => setLaunchWizardOpen(true)}
+              variant="outline"
+              className="border-emerald-500/20 text-emerald-500 hover:bg-emerald-500/5 rounded-xl h-10"
+            >
+              <IconRocket className="mr-2 h-4 w-4" />
+              Launch Survey
+            </Button>
+          )}
+          {canCreate && (
+            <Button
+              asChild
+              className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl h-10"
+            >
+              <Link href="/dashboard/surveys/new">
+                <IconPlus className="mr-2 h-4 w-4" />
+                Create Survey
+              </Link>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -111,56 +122,60 @@ export function SurveyList({ searchQuery = "" }: { searchQuery?: string }) {
                 className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
                 onClick={(e) => e.stopPropagation()}
               >
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-8 rounded-lg text-zinc-500 hover:text-white hover:bg-white/10"
-                  onClick={() =>
-                    router.push(`/dashboard/surveys/${survey._id}/edit`)
-                  }
-                  title="Edit survey"
-                >
-                  <IconPencil className="size-4" />
-                </Button>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-8 rounded-lg text-zinc-500 hover:text-red-400 hover:bg-red-500/10"
-                      title="Delete survey"
-                    >
-                      <IconTrash className="size-4" />
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent className="border-white/10 bg-sidebar text-white">
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Delete survey?</AlertDialogTitle>
-                      <AlertDialogDescription className="text-zinc-400">
-                        "{survey.title}" will be permanently deleted. This
-                        action cannot be undone.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel className="border-white/10 bg-transparent text-white hover:bg-white/5">
-                        Cancel
-                      </AlertDialogCancel>
-                      <AlertDialogAction
-                        className="bg-red-500 hover:bg-red-600 text-white"
-                        onClick={async () => {
-                          try {
-                            await removeSurvey({ id: survey._id });
-                            toast.success("Survey deleted");
-                          } catch {
-                            toast.error("Failed to delete survey");
-                          }
-                        }}
+                {canEdit && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-8 rounded-lg text-zinc-500 hover:text-white hover:bg-white/10"
+                    onClick={() =>
+                      router.push(`/dashboard/surveys/${survey._id}/edit`)
+                    }
+                    title="Edit survey"
+                  >
+                    <IconPencil className="size-4" />
+                  </Button>
+                )}
+                {canDelete && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-8 rounded-lg text-zinc-500 hover:text-red-400 hover:bg-red-500/10"
+                        title="Delete survey"
                       >
-                        Delete
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                        <IconTrash className="size-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="border-white/10 bg-sidebar text-white">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete survey?</AlertDialogTitle>
+                        <AlertDialogDescription className="text-zinc-400">
+                          "{survey.title}" will be permanently deleted. This
+                          action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel className="border-white/10 bg-transparent text-white hover:bg-white/5">
+                          Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                          className="bg-red-500 hover:bg-red-600 text-white"
+                          onClick={async () => {
+                            try {
+                              await removeSurvey({ id: survey._id });
+                              toast.success("Survey deleted");
+                            } catch {
+                              toast.error("Failed to delete survey");
+                            }
+                          }}
+                        >
+                          Delete
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
               </div>
 
               <div className="flex justify-between items-start mb-4">

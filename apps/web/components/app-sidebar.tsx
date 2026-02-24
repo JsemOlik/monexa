@@ -32,6 +32,7 @@ import {
   OrganizationList,
   useUser,
   useClerk,
+  useAuth,
 } from "@clerk/nextjs";
 import {
   Dialog,
@@ -141,6 +142,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { organization, membership } = useOrganization();
   const { user } = useUser();
   const { openOrganizationProfile } = useClerk();
+  const { has } = useAuth();
   const [open, setOpen] = React.useState(false);
 
   const orgName = organization?.name || "Personal Workspace";
@@ -150,6 +152,26 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     ? membership.role.split(":")[1]?.charAt(0).toUpperCase() +
       membership.role.split(":")[1]?.slice(1)
     : "Member";
+
+  const surveyPermissions = [
+    "org:surveys:view_pending",
+    "org:surveys:view_submitted",
+    "org:surveys:view_results",
+    "org:surveys:create_survey",
+    "org:surveys:edit_survey",
+    "org:surveys:delete_survey",
+    "org:surveys:prep_survey",
+    "org:surveys:launch_survey",
+    "org:surveys:cancel_pending",
+  ] as const;
+
+  const hasSurveyAccess = surveyPermissions.some((p) =>
+    has?.({ permission: p }),
+  );
+
+  const navItems = data.navMain.filter(
+    (item) => item.url !== "/dashboard/surveys" || hasSurveyAccess,
+  );
 
   // Auto-close modal when organization changes
   React.useEffect(() => {
@@ -243,7 +265,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
+        <NavMain items={navItems} />
         <NavAdmin items={data.admin} />
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
