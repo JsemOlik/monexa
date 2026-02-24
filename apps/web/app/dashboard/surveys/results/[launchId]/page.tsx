@@ -78,7 +78,7 @@ export default function SurveyResultsPage() {
           } as React.CSSProperties
         }
       >
-        <AppSidebar />
+        <AppSidebar variant="inset" />
         <SidebarInset>
           <SiteHeader />
           <div className="p-8 space-y-8">
@@ -107,7 +107,7 @@ export default function SurveyResultsPage() {
           } as React.CSSProperties
         }
       >
-        <AppSidebar />
+        <AppSidebar variant="inset" />
         <SidebarInset>
           <SiteHeader />
           <div className="p-8 text-center space-y-4">
@@ -133,10 +133,10 @@ export default function SurveyResultsPage() {
         } as React.CSSProperties
       }
     >
-      <AppSidebar />
+      <AppSidebar variant="inset" />
       <SidebarInset>
         <SiteHeader />
-        <div className="flex flex-1 flex-col gap-6 p-6 pt-4 max-w-[1200px] mx-auto w-full">
+        <div className="flex flex-1 flex-col gap-6 p-6 pt-2 max-w-[1400px] mx-auto w-full">
           {/* Header */}
           <div className="space-y-4">
             <button
@@ -195,7 +195,7 @@ export default function SurveyResultsPage() {
                     className={cn(
                       "bg-zinc-900/40 border-white/5 rounded-2xl overflow-hidden transition-all group/card",
                       isExpanded
-                        ? "border-emerald-500/30 bg-zinc-900 shadow-2xl"
+                        ? "border-emerald-500/30 bg-white/[0.02] shadow-2xl"
                         : "hover:border-white/10",
                     )}
                   >
