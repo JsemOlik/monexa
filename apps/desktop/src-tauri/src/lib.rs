@@ -8,6 +8,7 @@ use tauri::{
 
 struct AppState {
     is_blocked: Mutex<bool>,
+    was_main_visible: Mutex<bool>,
 }
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
@@ -45,8 +46,11 @@ async fn toggle_block_window(
     *is_blocked = blocked;
 
     if blocked {
-        // Hide main window
+        // Hide main window and remember visibility
         if let Some(main_window) = app.get_webview_window("main") {
+            let visible = main_window.is_visible().unwrap_or(true);
+            let mut was_visible = state.was_main_visible.lock().unwrap();
+            *was_visible = visible;
             let _ = main_window.hide();
         }
         create_blocked_window(&app)?;
@@ -56,10 +60,13 @@ async fn toggle_block_window(
             let _ = blocked_window.close();
         }
 
-        // Show main window
-        if let Some(main_window) = app.get_webview_window("main") {
-            let _ = main_window.show();
-            let _ = main_window.set_focus();
+        // Show main window only if it was visible before
+        let was_visible = *state.was_main_visible.lock().unwrap();
+        if was_visible {
+            if let Some(main_window) = app.get_webview_window("main") {
+                let _ = main_window.show();
+                let _ = main_window.set_focus();
+            }
         }
     }
     Ok(())
@@ -80,10 +87,13 @@ async fn close_secondary_windows(
         }
     }
 
-    // Ensure main window is visible
-    if let Some(main_window) = app.get_webview_window("main") {
-        let _ = main_window.show();
-        let _ = main_window.set_focus();
+    // Restore main window only if it was visible
+    let was_visible = *state.was_main_visible.lock().unwrap();
+    if was_visible {
+        if let Some(main_window) = app.get_webview_window("main") {
+            let _ = main_window.show();
+            let _ = main_window.set_focus();
+        }
     }
 
     Ok(())
@@ -94,6 +104,7 @@ pub fn run() {
     tauri::Builder::default()
         .manage(AppState {
             is_blocked: Mutex::new(false),
+            was_main_visible: Mutex::new(true), // Starts visible by default
         })
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_os::init())

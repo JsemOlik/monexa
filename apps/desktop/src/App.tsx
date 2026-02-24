@@ -75,6 +75,17 @@ function App() {
     };
   }, []);
 
+  // Heartbeat loop
+  useEffect(() => {
+    if (!isConnected) return;
+
+    const interval = setInterval(() => {
+      socket.emit("heartbeat" as any);
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [isConnected]);
+
   // Sync blocked state with Rust window manager
   useEffect(() => {
     if (!isBlockedWindow) {

@@ -43,21 +43,43 @@ convex.onUpdate(api.computers.list, {}, (computers) => {
 io.on("connection", (socket) => {
   console.log(`[${new Date().toISOString()}] Socket connected: ${socket.id}`);
 
+  let computerId: string | undefined; // Declare computerId here to be accessible by all handlers for this socket
+
   socket.on("registerComputer", async (data) => {
     console.log(`[${new Date().toISOString()}] Registering computer: ${data.name} (${data.id}) on ${data.os}`);
     try {
-      await convex.mutation(api.computers.register, {
+      const result = await convex.mutation(api.computers.register, {
         id: data.id,
         name: data.name,
         os: data.os,
-      });
-      console.log(`[${new Date().toISOString()}] Registration successful for: ${data.id}`);
+      }) as { isBlocked: boolean };
       
-      // Store socket for disconnect handling
+      console.log(`[${new Date().toISOString()}] Registration successful for: ${data.id}. Block status: ${result.isBlocked}`);
+      
+      // Store computerId and block state for this socket
+      computerId = data.id;
       (socket as any).computerId = data.id;
+      (socket as any).isBlocked = result.isBlocked;
       activeSockets.set(data.id, socket);
+
+      // Immediately apply block state if needed (handshake/offline-first)
+      if (result.isBlocked) {
+        console.log(`[${new Date().toISOString()}] Immediately blocking computer per registration handshake: ${data.id}`);
+        socket.emit("setBlocked" as any, true);
+      }
     } catch (error) {
       console.error(`[${new Date().toISOString()}] Registration failed for ${data.id}:`, error);
+    }
+  });
+
+  socket.on("heartbeat" as any, async () => {
+    if (computerId) {
+      // console.log(`[${new Date().toISOString()}] Heartbeat from: ${computerId}`);
+      try {
+        await convex.mutation(api.computers.heartbeat, { id: computerId });
+      } catch (error) {
+        console.error(`[${new Date().toISOString()}] Heartbeat failed for ${computerId}:`, error);
+      }
     }
   });
 

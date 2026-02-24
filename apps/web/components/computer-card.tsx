@@ -1,5 +1,5 @@
 import { useEffect, useState, forwardRef } from "react";
-import { Power, RotateCcw, Shield, Radar, Pencil, Unplug } from "lucide-react";
+import { Shield, Pencil, Unplug, Circle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -10,23 +10,12 @@ import {
   DialogTitle,
   DialogFooter,
   DialogTrigger,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-
-interface ComputerCardProps {
-  computer: {
-    id: string;
-    name: string;
-    os: string;
-    status: "online" | "offline";
-    lastSeen: number;
-    isBlocked?: boolean;
-  };
-}
-
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,69 +28,33 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-export function ComputerCard({ computer }: ComputerCardProps) {
-  const [lastSeenText, setLastSeenText] = useState("");
+export function ComputerCard({ computer }: { computer: any }) {
+  const [isRenaming, setIsRenaming] = useState(false);
   const [newName, setNewName] = useState(computer.name);
-  const [isRenameOpen, setIsRenameOpen] = useState(false);
-  const renameComputer = useMutation(api.computers.rename);
-  const setOffline = useMutation(api.computers.setOffline);
+  const [currentTime, setCurrentTime] = useState(Date.now());
+
+  const rename = useMutation(api.computers.rename);
   const toggleBlock = useMutation(api.computers.toggleBlock);
+  const setOffline = useMutation(api.computers.setOffline);
 
-  const handleRename = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newName.trim()) {
-      await renameComputer({ id: computer.id, newName: newName.trim() });
-      setIsRenameOpen(false);
-    }
-  };
-
-  const handleDisconnect = async () => {
-    await setOffline({ id: computer.id });
-  };
-
-  const handleBlock = async () => {
-    await toggleBlock({ id: computer.id });
-  };
-
+  // Update current time every 5 seconds to accurately reflect TTL status
   useEffect(() => {
-    const updateTime = () => {
-      const diff = Math.floor((Date.now() - computer.lastSeen) / 1000);
+    const timer = setInterval(() => setCurrentTime(Date.now()), 5000);
+    return () => clearInterval(timer);
+  }, []);
 
-      if (diff < 60) {
-        setLastSeenText(`${diff} s`);
-      } else if (diff < 3600) {
-        const m = Math.floor(diff / 60);
-        const s = diff % 60;
-        setLastSeenText(`${m} m ${s} s`);
-      } else if (diff < 86400) {
-        const h = Math.floor(diff / 3600);
-        const m = Math.floor((diff % 3600) / 60);
-        setLastSeenText(`${h} h ${m} m`);
-      } else if (diff < 604800) {
-        const d = Math.floor(diff / 86400);
-        const h = Math.floor((diff % 86400) / 3600);
-        setLastSeenText(`${d} d ${h} h`);
-      } else {
-        const w = Math.floor(diff / 604800);
-        const d = Math.floor((diff % 604800) / 86400);
-        setLastSeenText(`${w} w ${d} d`);
-      }
-    };
-
-    updateTime();
-    const interval = setInterval(updateTime, 1000);
-    return () => clearInterval(interval);
-  }, [computer.lastSeen]);
+  const isOnline = computer.status === "online" && (currentTime - computer.lastSeen < 20000);
+  const isBlocked = !!computer.isBlocked;
 
   return (
     <Card
       className={cn(
         "overflow-hidden border border-border/10 border-t-[6px] bg-[#1c1c1c] dark:bg-sidebar shadow-none transition-all rounded-2xl flex flex-col",
-        computer.isBlocked
-          ? "border-t-orange-500"
-          : computer.status === "online"
+        isBlocked
+          ? "border-t-red-500"
+          : isOnline
             ? "border-t-[#10a37f]"
-            : "border-t-red-500",
+            : "border-t-orange-500",
       )}
     >
       <div className="px-5 ">
@@ -111,111 +64,100 @@ export function ComputerCard({ computer }: ComputerCardProps) {
               {computer.name}
             </h3>
           </div>
-          <div className="flex items-center justify-between mt-1">
-            <div className="flex items-center gap-2 text-[0.8rem] font-medium text-muted-foreground/90">
-              <span
-                className={
-                  computer.isBlocked
-                    ? "text-orange-500"
-                    : computer.status === "online"
-                      ? "text-[#10a37f]"
-                      : "text-red-500/90"
-                }
-              >
-                {computer.isBlocked
-                  ? "Zablokováno"
-                  : computer.status === "online"
-                    ? "Zapnuto"
-                    : "Vypnuto"}
-              </span>
-              <span className="text-muted-foreground/40">•</span>
-              <span>{lastSeenText}</span>
-            </div>
-            <span className="text-[0.65rem] text-muted-foreground uppercase font-bold tracking-wider opacity-70">
+          <div className="flex flex-wrap items-center gap-2">
+            {isOnline ? (
+              <div className="flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-500">
+                <Circle className="h-2 w-2 fill-emerald-500" />
+                Zapnuto
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 rounded-full border border-orange-500/20 bg-orange-500/10 px-2 py-0.5 text-xs font-medium text-orange-500">
+                <Circle className="h-2 w-2 fill-orange-500" />
+                Vypnuto
+              </div>
+            )}
+            <div className="rounded-full border border-white/5 bg-white/5 px-2 py-0.5 text-xs font-medium text-zinc-500">
               {computer.os}
-            </span>
+            </div>
           </div>
         </div>
 
         <div className="flex items-center gap-1.5">
-          <ActionButton icon={Power} />
-          <ActionButton icon={RotateCcw} />
           <ActionButton
             icon={Shield}
-            onClick={handleBlock}
-            className={cn(computer.isBlocked && "bg-orange-500/20 text-orange-500 hover:bg-orange-500/30")}
+            onClick={() => toggleBlock({ id: computer.id })}
+            className={cn(
+              isBlocked && "bg-red-500 text-white hover:bg-red-600 border-red-600"
+            )}
+            title={isBlocked ? "Odblokovat" : "Zablokovat"}
           />
-          <ActionButton icon={Radar} />
-
-          <Dialog open={isRenameOpen} onOpenChange={setIsRenameOpen}>
+          
+          <Dialog open={isRenaming} onOpenChange={setIsRenaming}>
             <DialogTrigger asChild>
-              <ActionButton icon={Pencil} />
+              <ActionButton icon={Pencil} title="Přejmenovat" />
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md bg-[#1c1c1c] border-border/10 text-white rounded-2xl">
+            <DialogContent className="border-white/10 bg-zinc-950 text-white sm:max-w-[425px]">
               <DialogHeader>
-                <DialogTitle>Rename Computer</DialogTitle>
+                <DialogTitle>Přejmenovat počítač</DialogTitle>
+                <DialogDescription className="text-zinc-400">
+                  Zadejte nový název pro toto zařízení.
+                </DialogDescription>
               </DialogHeader>
-              <form onSubmit={handleRename}>
-                <div className="grid gap-4 py-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="name" className="text-muted-foreground">
-                      Hostname
-                    </Label>
-                    <Input
-                      id="name"
-                      value={newName}
-                      onChange={(e) => setNewName(e.target.value)}
-                      className="bg-[#2c2c2e] border-border/10 text-white focus-visible:ring-[#10a37f]"
-                      autoFocus
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => setIsRenameOpen(false)}
-                    className="text-white hover:bg-white/5"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    className="bg-[#10a37f] hover:bg-[#0e8c6d] text-white"
-                  >
-                    Save Changes
-                  </Button>
-                </DialogFooter>
-              </form>
+              <div className="grid gap-4 py-4">
+                <Input
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  className="border-white/10 bg-zinc-900 text-white"
+                />
+              </div>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsRenaming(false)}
+                  className="border-white/10 bg-transparent text-white hover:bg-white/5"
+                >
+                  Zrušit
+                </Button>
+                <Button
+                  onClick={() => {
+                    rename({ id: computer.id, newName });
+                    setIsRenaming(false);
+                  }}
+                  className="bg-white text-black hover:bg-white/90"
+                >
+                  Uložit
+                </Button>
+              </DialogFooter>
             </DialogContent>
           </Dialog>
-
+          
           <div className="ml-auto">
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <ActionButton icon={Unplug} variant="danger" />
-              </AlertDialogTrigger>
-              <AlertDialogContent className="bg-[#1c1c1c] border-border/10 text-white rounded-2xl">
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Disconnect Computer?</AlertDialogTitle>
-                  <AlertDialogDescription className="text-muted-foreground">
-                    This will mark the computer as offline in the dashboard.
-                    Are you sure you want to proceed?
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel className="bg-transparent border-none text-white hover:bg-white/5 hover:text-white">
-                    Cancel
-                  </AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={handleDisconnect}
-                    className="bg-red-500 hover:bg-red-600 text-white border-none"
-                  >
-                    Disconnect
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            {isOnline && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <ActionButton icon={Unplug} variant="danger" title="Odpojit" />
+                </AlertDialogTrigger>
+                <AlertDialogContent className="border-white/10 bg-zinc-950 text-white">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Odpojit počítač?</AlertDialogTitle>
+                    <AlertDialogDescription className="text-zinc-400">
+                      Opravdu chcete odpojit počítač {computer.name}? Pokud je aplikace na počítači spuštěna, bude spojení ihned ukončeno.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel className="border-white/10 bg-transparent text-white hover:bg-white/5">
+                      Zrušit
+                    </AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => setOffline({ id: computer.id })}
+                      className="bg-red-500 text-white hover:bg-red-600"
+                    >
+                      Odpojit
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
           </div>
         </div>
       </div>
