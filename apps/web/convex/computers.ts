@@ -229,3 +229,19 @@ export const wipe = mutation({
     console.log(`[CONVEX] Wiped computer ${computer.id} from organization ${orgId}`);
   },
 });
+
+export const setSurveying = mutation({
+  args: { id: v.string(), orgId: v.string(), isSurveying: v.boolean() },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("computers")
+      .withIndex("by_computerId", (q) => q.eq("id", args.id))
+      .unique();
+
+    if (existing && existing.orgId === args.orgId) {
+      await ctx.db.patch(existing._id, {
+        isSurveying: args.isSurveying,
+      });
+    }
+  },
+});

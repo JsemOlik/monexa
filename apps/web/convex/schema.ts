@@ -11,6 +11,7 @@ export default defineSchema({
     isBlocked: v.optional(v.boolean()),
     orgId: v.string(),
     roomId: v.optional(v.string()),
+    isSurveying: v.optional(v.boolean()),
   })
     .index("by_computerId", ["id"])
     .index("by_orgId", ["orgId"])
@@ -48,4 +49,14 @@ export default defineSchema({
   })
     .index("by_orgId", ["orgId"])
     .index("by_status", ["status"]),
+
+  surveyLaunches: defineTable({
+    surveyId: v.id("surveys"),
+    orgId: v.string(),
+    targets: v.array(v.string()), // list of computer IDs
+    status: v.union(v.literal("active"), v.literal("completed")),
+    launchedAt: v.number(),
+  })
+    .index("by_orgId", ["orgId"])
+    .index("by_surveyId", ["surveyId"]),
 });

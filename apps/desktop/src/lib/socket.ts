@@ -15,17 +15,9 @@ export async function initSocket() {
     const os = (await getOsType()) ?? "unknown";
     const hostname = (await getHostname()) ?? "unknown-host";
     console.log(`OS: ${os}, Hostname: ${hostname}`);
-    
-    const id = hostname;
 
     socket.on("connect", () => {
-      console.log("Connected to server with ID:", socket.id);
-      socket.emit("registerComputer", {
-        id,
-        name: hostname,
-        os,
-      });
-      console.log("Sent registration data for:", id);
+      console.log("[SOCKET] Connected to server:", socket.id);
     });
 
     socket.on("connect_error", (err) => {

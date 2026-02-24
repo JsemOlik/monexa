@@ -1,6 +1,14 @@
 import { useEffect, useState, useRef } from "react";
 import { socket } from "./lib/socket";
 import { invoke } from "@tauri-apps/api/core";
+import {
+  emit as tauriEmit,
+  listen as tauriListen,
+} from "@tauri-apps/api/event";
+import {
+  type as getOsType,
+  hostname as getHostname,
+} from "@tauri-apps/plugin-os";
 import "./App.css";
 
 function BlockedContent() {
@@ -26,9 +34,34 @@ function BlockedContent() {
           </svg>
         </div>
         <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight text-white">Your computer is blocked</h1>
-          <p className="text-zinc-400 text-lg">Please contact your administrator for further details.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-white">
+            Your computer is blocked
+          </h1>
+          <p className="text-zinc-400 text-lg">
+            Please contact your administrator for further details.
+          </p>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function SurveyContent() {
+  useEffect(() => {
+    // When the survey window unmounts, notify the main window via Tauri IPC
+    // so it can emit setSurveying(false) on its registered socket
+    return () => {
+      console.log("[SURVEY] Emitting survey-closed Tauri event...");
+      tauriEmit("survey-closed", {}).catch(console.error);
+    };
+  }, []);
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-zinc-950 text-white cursor-none">
+      <div className="animate-in fade-in zoom-in duration-1000">
+        <h1 className="text-6xl font-black tracking-tighter uppercase italic text-emerald-500 shadow-[0_0_30px_rgba(16,185,129,0.3)]">
+          Survey
+        </h1>
       </div>
     </div>
   );
@@ -37,12 +70,15 @@ function BlockedContent() {
 function App() {
   const [isConnected, setIsConnected] = useState(socket.connected);
   const [isBlocked, setIsBlocked] = useState(false);
-  const [orgId, setOrgId] = useState<string | null>(localStorage.getItem("monexa_org_id"));
+  const [orgId, setOrgId] = useState<string | null>(
+    localStorage.getItem("monexa_org_id"),
+  );
   const [tempOrgId, setTempOrgId] = useState("");
   const [isValidating, setIsValidating] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
-  
+
   const isBlockedWindow = window.location.hash === "#/blocked";
+  const isSurveyWindow = window.location.hash === "#/survey";
   const disconnectTimeoutRef = useRef<any>(null);
 
   useEffect(() => {
@@ -52,17 +88,23 @@ function App() {
         clearTimeout(disconnectTimeoutRef.current);
         disconnectTimeoutRef.current = null;
       }
-      
+
       // Register with orgId if we have it
       if (orgId) {
-        console.log(`Regisering with Org ID: ${orgId}`);
-        // Get computer info (using placeholders for now, should ideally come from tauri-plugin-os)
-        socket.emit("registerComputer", {
-          id: "DESKTOP-OQ9QJQI", // Should be unique per machine
-          name: "DESKTOP-OQ9QJQI",
-          os: "windows",
-          orgId: orgId
-        });
+        (async () => {
+          const os = (await getOsType()) ?? "unknown";
+          const hostname = (await getHostname()) ?? "unknown-host";
+          console.log(
+            `[SOCKET] Registering dynamic identity: ${hostname} (OS: ${os}, Org: ${orgId})`,
+          );
+
+          socket.emit("registerComputer", {
+            id: hostname,
+            name: hostname,
+            os,
+            orgId: orgId,
+          });
+        })();
       }
     }
 
@@ -77,9 +119,35 @@ function App() {
       setIsBlocked(blocked);
     }
 
+    function onSurveyLaunch(data: { surveyId: string }) {
+      console.log(
+        `[SOCKET] SURVEY_LAUNCH received! Survey ID: ${data.surveyId}`,
+      );
+      // Emit setSurveying on the main window's registered socket BEFORE opening the window
+      console.log("[SOCKET] Emitting setSurveying(true) from main window...");
+      socket.emit("setSurveying", true);
+
+      console.log("[TAURI] Invoking toggle_survey_window(open=true)...");
+      invoke("toggle_survey_window", { open: true })
+        .then(() => console.log("[TAURI] toggle_survey_window SUCCESS"))
+        .catch((err) => {
+          console.error("[TAURI] toggle_survey_window FAILED:", err);
+        });
+    }
+
+    // Listen for survey-closed Tauri event from the survey window
+    // The survey window cannot use the socket directly (unregistered), so it fires this event
+    const unlistenSurveyClosed = tauriListen("survey-closed", () => {
+      console.log(
+        "[TAURI] survey-closed received → emitting setSurveying(false)",
+      );
+      socket.emit("setSurveying", false);
+    });
+
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
-    socket.on("setBlocked" as any, onSetBlocked);
+    socket.on("setBlocked", onSetBlocked);
+    socket.on("surveyLaunch", onSurveyLaunch);
 
     // Initial registration if already connected
     if (socket.connected && orgId) {
@@ -89,7 +157,9 @@ function App() {
     return () => {
       socket.off("connect", onConnect);
       socket.off("disconnect", onDisconnect);
-      socket.off("setBlocked" as any, onSetBlocked);
+      socket.off("setBlocked", onSetBlocked);
+      socket.off("surveyLaunch", onSurveyLaunch);
+      unlistenSurveyClosed.then((fn) => fn());
       if (disconnectTimeoutRef.current) {
         clearTimeout(disconnectTimeoutRef.current);
       }
@@ -101,7 +171,7 @@ function App() {
     if (!isConnected || !orgId) return;
 
     const interval = setInterval(() => {
-      socket.emit("heartbeat" as any);
+      socket.emit("heartbeat");
     }, 10000);
 
     return () => clearInterval(interval);
@@ -110,7 +180,9 @@ function App() {
   // Sync blocked state with Rust window manager
   useEffect(() => {
     if (!isBlockedWindow) {
-      invoke("toggle_block_window", { blocked: isBlocked }).catch(console.error);
+      invoke("toggle_block_window", { blocked: isBlocked }).catch(
+        console.error,
+      );
     }
   }, [isBlocked, isBlockedWindow]);
 
@@ -118,12 +190,18 @@ function App() {
     return <BlockedContent />;
   }
 
+  if (isSurveyWindow) {
+    return <SurveyContent />;
+  }
+
   if (!orgId) {
     return (
       <main className="flex flex-col items-center justify-center min-h-screen gap-6 p-8 text-center bg-zinc-950 text-white">
         <div className="space-y-2">
           <h1 className="text-3xl font-bold tracking-tight">Setup Monexa</h1>
-          <p className="text-zinc-400">Please enter your Organization ID from the dashboard.</p>
+          <p className="text-zinc-400">
+            Please enter your Organization ID from the dashboard.
+          </p>
         </div>
         <div className="w-full max-w-sm space-y-4">
           <div className="space-y-1">
@@ -136,11 +214,15 @@ function App() {
                 setValidationError(null);
               }}
               className={`w-full px-4 py-2 border rounded-md bg-zinc-900 focus:outline-none focus:ring-2 ${
-                validationError ? "border-red-500 focus:ring-red-500" : "border-zinc-800 focus:ring-emerald-500"
+                validationError
+                  ? "border-red-500 focus:ring-red-500"
+                  : "border-zinc-800 focus:ring-emerald-500"
               }`}
             />
             {validationError && (
-              <p className="text-xs text-red-500 text-left mt-1">{validationError}</p>
+              <p className="text-xs text-red-500 text-left mt-1">
+                {validationError}
+              </p>
             )}
           </div>
           <button
@@ -149,15 +231,19 @@ function App() {
               if (tempOrgId.trim()) {
                 setIsValidating(true);
                 setValidationError(null);
-                socket.emit("validateOrg" as any, { orgId: tempOrgId.trim() }, (res: { isValid: boolean }) => {
-                  setIsValidating(false);
-                  if (res.isValid) {
-                    localStorage.setItem("monexa_org_id", tempOrgId.trim());
-                    setOrgId(tempOrgId.trim());
-                  } else {
-                    setValidationError("Incorrect Organization ID");
-                  }
-                });
+                socket.emit(
+                  "validateOrg",
+                  { orgId: tempOrgId.trim() },
+                  (res: { isValid: boolean }) => {
+                    setIsValidating(false);
+                    if (res.isValid) {
+                      localStorage.setItem("monexa_org_id", tempOrgId.trim());
+                      setOrgId(tempOrgId.trim());
+                    } else {
+                      setValidationError("Incorrect Organization ID");
+                    }
+                  },
+                );
               }
             }}
             className="w-full py-2 font-medium text-black transition-colors rounded-md bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-900 disabled:text-zinc-500"
@@ -174,7 +260,7 @@ function App() {
       <h1 className="m-0 text-2xl font-bold tracking-tight text-white">
         Monexa
       </h1>
-      
+
       <p className="text-xs text-zinc-500 font-mono">
         Org: {orgId.substring(0, 8)}...
       </p>
@@ -199,7 +285,7 @@ function App() {
           Reconnect
         </button>
       )}
-      <button 
+      <button
         onClick={() => {
           localStorage.removeItem("monexa_org_id");
           setOrgId(null);

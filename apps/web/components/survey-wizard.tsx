@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -32,15 +33,27 @@ interface Question {
   options?: string[];
 }
 
-export function SurveyWizard() {
+interface SurveyWizardProps {
+  surveyId?: Id<"surveys">;
+  initialTitle?: string;
+  initialQuestions?: Question[];
+}
+
+export function SurveyWizard({
+  surveyId,
+  initialTitle = "",
+  initialQuestions = [],
+}: SurveyWizardProps) {
   const router = useRouter();
   const createSurvey = useMutation(api.surveys.create);
+  const updateSurvey = useMutation(api.surveys.update);
+  const isEditMode = !!surveyId;
+
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
 
-  // Survey Data
-  const [title, setTitle] = useState("");
-  const [questions, setQuestions] = useState<Question[]>([]);
+  const [title, setTitle] = useState(initialTitle);
+  const [questions, setQuestions] = useState<Question[]>(initialQuestions);
 
   const addQuestion = (type: QuestionType) => {
     const newQuestion: Question = {
@@ -70,23 +83,25 @@ export function SurveyWizard() {
       setStep(1);
       return;
     }
-
     if (questions.length === 0) {
       toast.error("Please add at least one question");
       return;
     }
-
     setLoading(true);
     try {
-      await createSurvey({
-        title,
-        steps: questions,
-      });
-      toast.success("Survey created successfully!");
+      if (isEditMode) {
+        await updateSurvey({ id: surveyId, title, steps: questions });
+        toast.success("Survey updated successfully!");
+      } else {
+        await createSurvey({ title, steps: questions });
+        toast.success("Survey created successfully!");
+      }
       router.push("/dashboard/surveys");
     } catch (error) {
       console.error(error);
-      toast.error("Failed to create survey");
+      toast.error(
+        isEditMode ? "Failed to update survey" : "Failed to create survey",
+      );
     } finally {
       setLoading(false);
     }
@@ -94,7 +109,7 @@ export function SurveyWizard() {
 
   return (
     <div className="max-w-4xl mx-auto w-full py-8">
-      {/* Wizard Header - Steps Indicator */}
+      {/* Steps Indicator */}
       <div className="flex items-center justify-center mb-12 relative">
         <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-zinc-800 -translate-y-1/2 -z-10" />
         {[1, 2, 3].map((s) => (
@@ -130,7 +145,7 @@ export function SurveyWizard() {
             <div className="space-y-6">
               <div className="space-y-2">
                 <h2 className="text-3xl font-bold text-white">
-                  Let's name your survey
+                  {isEditMode ? "Edit survey title" : "Let's name your survey"}
                 </h2>
                 <p className="text-zinc-400">
                   Give it a clear title that explains what you're asking about.
@@ -158,8 +173,7 @@ export function SurveyWizard() {
                   }
                   className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl h-12 px-8 font-bold"
                 >
-                  Continue
-                  <IconChevronRight className="ml-2 size-4" />
+                  Continue <IconChevronRight className="ml-2 size-4" />
                 </Button>
               </div>
             </div>
@@ -250,7 +264,6 @@ export function SurveyWizard() {
                           }
                           className="border-none bg-transparent p-0 text-xl font-medium focus-visible:ring-0 placeholder:text-zinc-700"
                         />
-
                         {q.type === "multiple_choice" && (
                           <div className="space-y-2 pt-2">
                             <Label className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">
@@ -276,14 +289,13 @@ export function SurveyWizard() {
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    onClick={() => {
-                                      const newOptions = q.options?.filter(
-                                        (_, i) => i !== optIdx,
-                                      );
+                                    onClick={() =>
                                       updateQuestion(q.id, {
-                                        options: newOptions,
-                                      });
-                                    }}
+                                        options: q.options?.filter(
+                                          (_, i) => i !== optIdx,
+                                        ),
+                                      })
+                                    }
                                     className="size-8 opacity-0 group-hover/opt:opacity-100 transition-opacity text-zinc-600 hover:text-red-500"
                                   >
                                     <IconTrash className="size-3" />
@@ -331,14 +343,13 @@ export function SurveyWizard() {
                 }
                 className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl h-12 px-8 font-bold"
               >
-                Review
-                <IconChevronRight className="ml-2 size-4" />
+                Review <IconChevronRight className="ml-2 size-4" />
               </Button>
             </div>
           </div>
         )}
 
-        {/* Step 3: Finish */}
+        {/* Step 3: Review & Save */}
         {step === 3 && (
           <Card className="p-8 border-white/5 bg-zinc-950 rounded-3xl animate-in zoom-in-95">
             <div className="space-y-8">
@@ -347,11 +358,11 @@ export function SurveyWizard() {
                   <IconCheck className="size-8 text-emerald-500" />
                 </div>
                 <h2 className="text-3xl font-bold text-white">
-                  Ready to activate?
+                  {isEditMode ? "Review your changes" : "Ready to activate?"}
                 </h2>
                 <p className="text-zinc-400">
-                  "{title}" with {questions.length} questions is ready for
-                  launch.
+                  "{title}" with {questions.length} questions is ready
+                  {isEditMode ? " to save" : " for launch"}.
                 </p>
               </div>
 
@@ -384,7 +395,11 @@ export function SurveyWizard() {
                   disabled={loading}
                   className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl h-12 px-12 font-bold shadow-[0_0_20px_rgba(16,185,129,0.2)]"
                 >
-                  {loading ? "Saving..." : "Create & Launch"}
+                  {loading
+                    ? "Saving..."
+                    : isEditMode
+                      ? "Save Changes"
+                      : "Create & Launch"}
                 </Button>
               </div>
             </div>

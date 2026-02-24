@@ -17,7 +17,7 @@ const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer, {
 });
 
 // Subscribe to computer changes in Convex
-convex.onUpdate(api.computers.internalList, {}, (computers) => {
+convex.onUpdate(api.computers.internalList, {}, (computers: any[]) => {
   for (const computer of computers) {
     const socket = activeSockets.get(computer.id);
     if (socket) {
@@ -31,10 +31,11 @@ convex.onUpdate(api.computers.internalList, {}, (computers) => {
 
       // Handle real-time blocking
       const isBlocked = !!computer.isBlocked;
-      if ((socket as any).isBlocked !== isBlocked) {
+      const socketTyped = socket as any; // Temporary cast for custom props
+      if (socketTyped.isBlocked !== isBlocked) {
         console.log(`[${new Date().toISOString()}] Toggling block state for: ${computer.name} (${computer.id}) to ${isBlocked}`);
-        (socket as any).isBlocked = isBlocked;
-        socket.emit("setBlocked" as any, isBlocked);
+        socketTyped.isBlocked = isBlocked;
+        socket.emit("setBlocked", isBlocked);
       }
     }
   }
@@ -82,7 +83,7 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("validateOrg" as any, async (data: { orgId: string }, callback: (res: { isValid: boolean }) => void) => {
+  socket.on("validateOrg", async (data: { orgId: string }, callback: (res: { isValid: boolean }) => void) => {
     try {
       const result = await convex.query(api.computers.validateOrg, { id: data.orgId });
       callback(result);
@@ -92,7 +93,7 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("heartbeat" as any, async () => {
+  socket.on("heartbeat", async () => {
     if (computerId) {
       const orgId = (socket as any).orgId;
       // console.log(`[${new Date().toISOString()}] Heartbeat from: ${computerId}`);
@@ -100,6 +101,37 @@ io.on("connection", (socket) => {
         await convex.mutation(api.computers.heartbeat, { id: computerId, orgId });
       } catch (error) {
         console.error(`[${new Date().toISOString()}] Heartbeat failed for ${computerId}:`, error);
+      }
+    }
+  });
+
+  socket.on("launchSurvey", async (data: { surveyId: string, targets: string[] }) => {
+    console.log(`[${new Date().toISOString()}] RECEIVED launchSurvey for ${data.surveyId}. Targets: ${data.targets.length}`);
+    
+    for (const targetId of data.targets) {
+      const targetSocket = activeSockets.get(targetId);
+      if (targetSocket) {
+        console.log(`[${new Date().toISOString()}] ROUTING surveyLaunch to ${targetId} (Socket: ${targetSocket.id})`);
+        targetSocket.emit("surveyLaunch", { surveyId: data.surveyId });
+      } else {
+        console.warn(`[${new Date().toISOString()}] SKIPPING ${targetId}: No active socket found`);
+      }
+    }
+  });
+
+  socket.on("setSurveying", async (isSurveying: boolean) => {
+    const computerId = (socket as any).computerId;
+    const orgId = (socket as any).orgId;
+    if (computerId && orgId) {
+      console.log(`[${new Date().toISOString()}] Survey status changed for ${computerId}: ${isSurveying}`);
+      try {
+        await convex.mutation(api.computers.setSurveying, { 
+          id: computerId, 
+          orgId, 
+          isSurveying 
+        });
+      } catch (error) {
+        console.error(`[${new Date().toISOString()}] Failed to set surveying for ${computerId}:`, error);
       }
     }
   });

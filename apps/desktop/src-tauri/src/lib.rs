@@ -3,7 +3,7 @@ use tauri::{
     menu::{Menu, MenuItem},
     tray::{TrayIconBuilder, TrayIconEvent},
     webview::WebviewWindowBuilder,
-    AppHandle, Manager, WindowEvent,
+    AppHandle, Emitter, Manager, WindowEvent,
 };
 
 struct AppState {
@@ -15,6 +15,36 @@ struct AppState {
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
+}
+
+fn create_survey_window(app: &AppHandle) -> Result<(), String> {
+    if app.get_webview_window("survey").is_none() {
+        let survey_window = WebviewWindowBuilder::new(
+            app,
+            "survey",
+            tauri::WebviewUrl::App("index.html#/survey".into()),
+        )
+        .title("Monexa - Survey")
+        .fullscreen(true)
+        .always_on_top(true)
+        .decorations(false)
+        .resizable(false)
+        .visible(true)
+        .build()
+        .map_err(|e| e.to_string())?;
+
+        // When the survey window is destroyed (including force-close via Alt+F4),
+        // emit the survey-closed event to all windows so the main window can
+        // reset the surveying state via its registered socket.
+        let app_handle = app.clone();
+        survey_window.on_window_event(move |event| {
+            if matches!(event, WindowEvent::Destroyed) {
+                println!("[RUST] Survey window destroyed, emitting survey-closed event");
+                let _ = app_handle.emit("survey-closed", ());
+            }
+        });
+    }
+    Ok(())
 }
 
 fn create_blocked_window(app: &AppHandle) -> Result<(), String> {
@@ -32,6 +62,26 @@ fn create_blocked_window(app: &AppHandle) -> Result<(), String> {
         .visible(true)
         .build()
         .map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+async fn toggle_survey_window(
+    app: tauri::AppHandle,
+    open: bool,
+) -> Result<(), String> {
+    if open {
+        if let Some(survey_window) = app.get_webview_window("survey") {
+            let _ = survey_window.show();
+            let _ = survey_window.set_focus();
+        } else {
+            create_survey_window(&app)?;
+        }
+    } else {
+        if let Some(survey_window) = app.get_webview_window("survey") {
+            let _ = survey_window.close();
+        }
     }
     Ok(())
 }
@@ -174,7 +224,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             greet,
             toggle_block_window,
-            close_secondary_windows
+            close_secondary_windows,
+            toggle_survey_window
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

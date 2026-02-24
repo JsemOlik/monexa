@@ -1,5 +1,12 @@
 import { useEffect, useState, forwardRef } from "react";
-import { Shield, Pencil, Unplug, Circle, Trash2 } from "lucide-react";
+import {
+  Shield,
+  Pencil,
+  Unplug,
+  Circle,
+  Trash2,
+  ClipboardList,
+} from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -54,17 +61,20 @@ export const ComputerCard = forwardRef<
   const isOnline =
     computer.status === "online" && currentTime - computer.lastSeen < 20000;
   const isBlocked = !!computer.isBlocked;
+  const isSurveying = !!computer.isSurveying;
 
   return (
     <Card
       ref={ref}
       className={cn(
         "overflow-hidden border border-border/10 border-t-[6px] bg-[#1c1c1c] dark:bg-sidebar shadow-none transition-all rounded-2xl flex flex-col",
-        isBlocked
-          ? "border-t-red-500"
-          : isOnline
-            ? "border-t-[#10a37f]"
-            : "border-t-orange-500",
+        isSurveying
+          ? "border-t-purple-500"
+          : isBlocked
+            ? "border-t-red-500"
+            : isOnline
+              ? "border-t-[#10a37f]"
+              : "border-t-orange-500",
         className,
       )}
       {...props}
@@ -86,6 +96,12 @@ export const ComputerCard = forwardRef<
               <div className="flex items-center gap-1.5 rounded-full border border-orange-500/20 bg-orange-500/10 px-2 py-0.5 text-xs font-medium text-orange-500">
                 <Circle className="h-2 w-2 fill-orange-500" />
                 Vypnuto
+              </div>
+            )}
+            {isSurveying && (
+              <div className="flex items-center gap-1.5 rounded-full border border-purple-500/30 bg-purple-500/10 px-2 py-0.5 text-xs font-medium text-purple-400 animate-pulse">
+                <ClipboardList className="h-2.5 w-2.5" />
+                Surveying
               </div>
             )}
             <div className="rounded-full border border-white/5 bg-white/5 px-2 py-0.5 text-xs font-medium text-zinc-500">
