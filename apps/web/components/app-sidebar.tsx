@@ -27,7 +27,12 @@ import { NavAdmin } from "@/components/nav-admin";
 import { NavMain } from "@/components/nav-main";
 import { NavSecondary } from "@/components/nav-secondary";
 import { NavUser } from "@/components/nav-user";
-import { useOrganization, OrganizationList, useUser, useClerk } from "@clerk/nextjs";
+import {
+  useOrganization,
+  OrganizationList,
+  useUser,
+  useClerk,
+} from "@clerk/nextjs";
 import {
   Dialog,
   DialogContent,
@@ -64,7 +69,7 @@ const data = {
     },
     {
       title: "Surveys",
-      url: "/surveys",
+      url: "/dashboard/surveys",
       icon: IconChartBar,
     },
   ],
@@ -121,7 +126,7 @@ const data = {
       title: "Get Help",
       url: "#",
       icon: IconHelp,
-    }
+    },
   ],
   admin: [
     {
@@ -140,9 +145,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   const orgName = organization?.name || "Personal Workspace";
   const orgImageUrl = organization?.imageUrl || user?.imageUrl;
-  
-  const role = membership?.role 
-    ? membership.role.split(":")[1]?.charAt(0).toUpperCase() + membership.role.split(":")[1]?.slice(1)
+
+  const role = membership?.role
+    ? membership.role.split(":")[1]?.charAt(0).toUpperCase() +
+      membership.role.split(":")[1]?.slice(1)
     : "Member";
 
   // Auto-close modal when organization changes
@@ -155,7 +161,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            {!user || (organization === undefined) ? (
+            {!user || organization === undefined ? (
               <div className="flex items-center gap-2 px-1.5 py-2">
                 <Skeleton className="size-8 rounded-lg" />
                 <div className="grid flex-1 gap-1">
@@ -180,7 +186,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     </div>
                     <div className="grid flex-1 text-left text-sm leading-tight">
                       <span className="truncate font-semibold">{orgName}</span>
-                      <span className="truncate text-xs text-muted-foreground">{role}</span>
+                      <span className="truncate text-xs text-muted-foreground">
+                        {role}
+                      </span>
                     </div>
                     <IconSelector className="ml-auto size-4" />
                   </SidebarMenuButton>
@@ -208,24 +216,25 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
             {/* Switch Organization Dialog */}
             <Dialog open={open} onOpenChange={setOpen}>
-              <DialogContent 
+              <DialogContent
                 showCloseButton={false}
                 className="flex max-w-2xl flex-col items-center justify-center border-none bg-transparent p-0 shadow-none outline-none"
               >
-                <DialogTitle className="sr-only">Select Organization</DialogTitle>
+                <DialogTitle className="sr-only">
+                  Select Organization
+                </DialogTitle>
                 <DialogDescription className="sr-only">
                   Choose an organization to switch workspaces.
                 </DialogDescription>
-                <OrganizationList 
-                  hidePersonal={false} 
+                <OrganizationList
+                  hidePersonal={false}
                   afterSelectOrganizationUrl="/dashboard"
                   afterCreateOrganizationUrl="/dashboard"
-                  
                   appearance={{
                     elements: {
                       rootBox: "flex items-center justify-center w-full",
                       card: "shadow-xl border border-zinc-800 bg-zinc-950",
-                    }
+                    },
                   }}
                 />
               </DialogContent>
