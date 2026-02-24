@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { useAuth } from "@clerk/nextjs";
 
 export function SubmittedResponses({
   searchQuery = "",
@@ -46,6 +47,8 @@ export function SubmittedResponses({
     l.surveyTitle.toLowerCase().includes(searchQuery.toLowerCase()),
   );
   const removeLaunch = useMutation(api.surveyLaunches.remove);
+  const { has } = useAuth();
+  const canViewResults = has?.({ permission: "org:surveys:view_results" });
 
   const handleDelete = async (launchId: string) => {
     try {
@@ -89,7 +92,10 @@ export function SubmittedResponses({
   return (
     <div className="grid gap-4">
       {launches.map((launch: any) => (
-        <Card className="bg-sidebar border-white/5 rounded-3xl overflow-hidden hover:border-emerald-500/50 hover:bg-sidebar-accent/80 transition-all">
+        <Card
+          key={launch.launchId}
+          className="bg-sidebar border-white/5 rounded-3xl overflow-hidden hover:border-emerald-500/50 hover:bg-sidebar-accent/80 transition-all"
+        >
           <CardHeader className="px-5">
             <div className="flex items-center justify-between">
               <div className="space-y-1">
@@ -129,7 +135,7 @@ export function SubmittedResponses({
                       <IconTrash className="size-5" />
                     </Button>
                   </AlertDialogTrigger>
-                  <AlertDialogContent className="bg-zinc-950 border-white/10 rounded-3xl">
+                  <AlertDialogContent className="bg-sidebar border-white/10 rounded-3xl">
                     <AlertDialogHeader>
                       <AlertDialogTitle className="text-xl font-bold">
                         Delete survey results?
@@ -153,13 +159,15 @@ export function SubmittedResponses({
                   </AlertDialogContent>
                 </AlertDialog>
 
-                <Link
-                  href={`/dashboard/surveys/results/${launch.launchId}`}
-                  className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-xl transition-all group/link"
-                >
-                  <span className="text-sm font-medium">View Results</span>
-                  <IconChevronRight className="size-4 group-hover/link:translate-x-0.5 transition-transform" />
-                </Link>
+                {canViewResults && (
+                  <Link
+                    href={`/dashboard/surveys/results/${launch.launchId}`}
+                    className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-xl transition-all group/link"
+                  >
+                    <span className="text-sm font-medium">View Results</span>
+                    <IconChevronRight className="size-4 group-hover/link:translate-x-0.5 transition-transform" />
+                  </Link>
+                )}
               </div>
             </div>
           </CardHeader>

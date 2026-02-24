@@ -28,16 +28,40 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { Id } from "@/convex/_generated/dataModel";
 import { useState } from "react";
+import { useAuth } from "@clerk/nextjs";
+import { Unauthorized } from "@/components/unauthorized";
 
 export default function SurveyResultsPage() {
   const params = useParams();
   const router = useRouter();
   const launchId = params.launchId as Id<"surveyLaunches">;
 
+  const { has } = useAuth();
+  const canViewResults = has?.({ permission: "org:surveys:view_results" });
+
   const data = useQuery(api.surveyResponses.getResults, { launchId });
   const [expandedComputerId, setExpandedComputerId] = useState<string | null>(
     null,
   );
+
+  if (canViewResults === false) {
+    return (
+      <SidebarProvider
+        style={
+          {
+            "--sidebar-width": "calc(var(--spacing) * 72)",
+            "--header-height": "calc(var(--spacing) * 12)",
+          } as React.CSSProperties
+        }
+      >
+        <AppSidebar variant="inset" />
+        <SidebarInset>
+          <SiteHeader />
+          <Unauthorized message="You don't have permission to view survey results." />
+        </SidebarInset>
+      </SidebarProvider>
+    );
+  }
 
   const findQuestion = (questionId: string) => {
     return (

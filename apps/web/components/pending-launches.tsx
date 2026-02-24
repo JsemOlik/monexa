@@ -17,8 +17,12 @@ import { useState } from "react";
 
 export function PendingLaunches({
   searchQuery = "",
+  canCancel = false,
+  canLaunch = false,
 }: {
   searchQuery?: string;
+  canCancel?: boolean;
+  canLaunch?: boolean;
 }) {
   const allPendingLaunches = useQuery(api.surveyLaunches.listPending);
   const pendingLaunches = allPendingLaunches?.filter((l: any) =>
@@ -143,41 +147,45 @@ export function PendingLaunches({
           </div>
 
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              className="flex-1 border-white/5 hover:bg-red-500/10 hover:text-red-500 rounded-xl h-10 mt-2 transition-all"
-              onClick={() => handleCancel(launch)}
-              disabled={startingIds.has(launch._id)}
-            >
-              Cancel
-            </Button>
-            <Button
-              className={`flex-1 text-white rounded-xl h-10 mt-2 transition-all ${
-                launch.status === "started"
-                  ? "bg-sidebar-accent hover:bg-sidebar-accent/80 border border-white/10"
-                  : "bg-emerald-500 hover:bg-emerald-600"
-              }`}
-              onClick={() =>
-                launch.status !== "started" && handleStart(launch._id)
-              }
-              disabled={
-                startingIds.has(launch._id) || launch.status === "started"
-              }
-            >
-              {startingIds.has(launch._id) ? (
-                <>Starting...</>
-              ) : launch.status === "started" ? (
-                <>
-                  <IconCheck className="mr-2 h-4 w-4" />
-                  Live
-                </>
-              ) : (
-                <>
-                  <IconPlayerPlayFilled className="mr-2 h-4 w-4" />
-                  Start
-                </>
-              )}
-            </Button>
+            {canCancel && (
+              <Button
+                variant="outline"
+                className="flex-1 border-white/5 hover:bg-red-500/10 hover:text-red-500 rounded-xl h-10 mt-2 transition-all"
+                onClick={() => handleCancel(launch)}
+                disabled={startingIds.has(launch._id)}
+              >
+                Cancel
+              </Button>
+            )}
+            {canLaunch && (
+              <Button
+                className={`flex-1 text-white rounded-xl h-10 mt-2 transition-all ${
+                  launch.status === "started"
+                    ? "bg-sidebar-accent hover:bg-sidebar-accent/80 border border-white/10"
+                    : "bg-emerald-500 hover:bg-emerald-600"
+                }`}
+                onClick={() =>
+                  launch.status !== "started" && handleStart(launch._id)
+                }
+                disabled={
+                  startingIds.has(launch._id) || launch.status === "started"
+                }
+              >
+                {startingIds.has(launch._id) ? (
+                  <>Starting...</>
+                ) : launch.status === "started" ? (
+                  <>
+                    <IconCheck className="mr-2 h-4 w-4" />
+                    Live
+                  </>
+                ) : (
+                  <>
+                    <IconPlayerPlayFilled className="mr-2 h-4 w-4" />
+                    Start
+                  </>
+                )}
+              </Button>
+            )}
           </div>
         </Card>
       ))}
