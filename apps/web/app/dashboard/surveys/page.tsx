@@ -16,15 +16,51 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@clerk/nextjs";
 import { Unauthorized } from "@/components/unauthorized";
 
+const ALL_SURVEY_PERMISSIONS = [
+  "org:surveys:view_pending",
+  "org:surveys:view_submitted",
+  "org:surveys:view_results",
+  "org:surveys:create_survey",
+  "org:surveys:edit_survey",
+  "org:surveys:delete_survey",
+  "org:surveys:prep_survey",
+  "org:surveys:launch_survey",
+  "org:surveys:cancel_pending",
+] as const;
+
 export default function SurveysPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const pendingCount = useQuery(api.surveyLaunches.listPending)?.length ?? 0;
   const responseCount = useQuery(api.surveyResponses.listGrouped)?.length ?? 0;
   const { has } = useAuth();
+
+  const hasSurveyAccess =
+    has !== undefined &&
+    ALL_SURVEY_PERMISSIONS.some((p) => has({ permission: p }));
+
   const canViewSubmitted = has?.({ permission: "org:surveys:view_submitted" });
   const canViewPending = has?.({ permission: "org:surveys:view_pending" });
   const canCancelPending = has?.({ permission: "org:surveys:cancel_pending" });
   const canLaunchSurvey = has?.({ permission: "org:surveys:launch_survey" });
+
+  if (has !== undefined && !hasSurveyAccess) {
+    return (
+      <SidebarProvider
+        style={
+          {
+            "--sidebar-width": "calc(var(--spacing) * 72)",
+            "--header-height": "calc(var(--spacing) * 12)",
+          } as React.CSSProperties
+        }
+      >
+        <AppSidebar variant="inset" />
+        <SidebarInset>
+          <SiteHeader />
+          <Unauthorized message="You don't have permission to access surveys." />
+        </SidebarInset>
+      </SidebarProvider>
+    );
+  }
 
   return (
     <SidebarProvider
