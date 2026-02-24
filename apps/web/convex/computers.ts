@@ -211,3 +211,21 @@ export const assignToRoom = mutation({
     console.log(`[CONVEX] Assigned computer ${computer.id} to room ${args.roomId}`);
   },
 });
+
+export const wipe = mutation({
+  args: { id: v.id("computers") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+
+    const orgId = (identity as any).org_id || identity.orgId || identity.subject;
+
+    const computer = await ctx.db.get(args.id);
+    if (!computer || computer.orgId !== orgId) {
+      throw new Error("Computer not found or unauthorized");
+    }
+
+    await ctx.db.delete(args.id);
+    console.log(`[CONVEX] Wiped computer ${computer.id} from organization ${orgId}`);
+  },
+});

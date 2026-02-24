@@ -5,6 +5,7 @@ import { api } from "@/convex/_generated/api";
 import { Copy, Hash } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function SiteHeader() {
   const { user } = useUser();
@@ -35,7 +36,9 @@ export function SiteHeader() {
         />
         <h1 className="text-base font-medium">Dashboard</h1>
         <div className="ml-auto flex items-center gap-4">
-          {orgId && (
+          {!user || (organization === undefined) ? (
+            <Skeleton className="h-7 w-32 rounded-md bg-zinc-900 border border-zinc-800" />
+          ) : orgId ? (
             <div 
               onClick={copyOrgId}
               className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-zinc-900 border border-zinc-800 text-xs font-mono text-zinc-400 hover:text-white hover:border-zinc-700 cursor-pointer transition-all"
@@ -45,7 +48,7 @@ export function SiteHeader() {
               <span>Org: {orgId.substring(0, 12)}...</span>
               <Copy className="h-3 w-3 ml-1" />
             </div>
-          )}
+          ) : null}
         </div>
       </div>
     </header>

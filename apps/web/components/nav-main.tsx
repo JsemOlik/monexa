@@ -29,10 +29,15 @@ export function NavMain({
         <SidebarMenu>
           {items.map((item) => (
             <SidebarMenuItem key={item.title}>
-              <SidebarMenuButton 
+              <SidebarMenuButton
                 asChild
                 tooltip={item.title}
-                isActive={pathname === item.url || pathname.startsWith(item.url + "/")}
+                isActive={
+                  item.url === "/dashboard"
+                    ? pathname === "/dashboard"
+                    : pathname === item.url ||
+                      pathname.startsWith(item.url + "/")
+                }
               >
                 <Link href={item.url}>
                   {item.icon && <item.icon />}

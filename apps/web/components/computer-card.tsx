@@ -1,5 +1,5 @@
 import { useEffect, useState, forwardRef } from "react";
-import { Shield, Pencil, Unplug, Circle } from "lucide-react";
+import { Shield, Pencil, Unplug, Circle, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -26,11 +26,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
+  AlertDialogMedia,
 } from "@/components/ui/alert-dialog";
 
 export const ComputerCard = forwardRef<
   HTMLDivElement,
-  { computer: any; isManagement?: boolean } & React.HTMLAttributes<HTMLDivElement>
+  {
+    computer: any;
+    isManagement?: boolean;
+  } & React.HTMLAttributes<HTMLDivElement>
 >(({ computer, isManagement, className, ...props }, ref) => {
   const [isRenaming, setIsRenaming] = useState(false);
   const [newName, setNewName] = useState(computer.name);
@@ -39,6 +43,7 @@ export const ComputerCard = forwardRef<
   const rename = useMutation(api.computers.rename);
   const toggleBlock = useMutation(api.computers.toggleBlock);
   const setOffline = useMutation(api.computers.setOffline);
+  const wipe = useMutation(api.computers.wipe);
 
   // Update current time every 5 seconds to accurately reflect TTL status
   useEffect(() => {
@@ -46,7 +51,8 @@ export const ComputerCard = forwardRef<
     return () => clearInterval(timer);
   }, []);
 
-  const isOnline = computer.status === "online" && (currentTime - computer.lastSeen < 20000);
+  const isOnline =
+    computer.status === "online" && currentTime - computer.lastSeen < 20000;
   const isBlocked = !!computer.isBlocked;
 
   return (
@@ -59,7 +65,7 @@ export const ComputerCard = forwardRef<
           : isOnline
             ? "border-t-[#10a37f]"
             : "border-t-orange-500",
-        className
+        className,
       )}
       {...props}
     >
@@ -94,11 +100,12 @@ export const ComputerCard = forwardRef<
               icon={Shield}
               onClick={() => toggleBlock({ id: computer.id })}
               className={cn(
-                isBlocked && "bg-red-500 text-white hover:bg-red-600 border-red-600"
+                isBlocked &&
+                  "bg-red-500 text-white hover:bg-red-600 border-red-600",
               )}
               title={isBlocked ? "Odblokovat" : "Zablokovat"}
             />
-            
+
             <Dialog open={isRenaming} onOpenChange={setIsRenaming}>
               <DialogTrigger asChild>
                 <ActionButton icon={Pencil} title="Přejmenovat" />
@@ -137,18 +144,24 @@ export const ComputerCard = forwardRef<
                 </DialogFooter>
               </DialogContent>
             </Dialog>
-            
+
             <div className="ml-auto">
-              {isOnline && (
+              {computer.status === "online" && (
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <ActionButton icon={Unplug} variant="danger" title="Odpojit" />
+                    <ActionButton
+                      icon={Unplug}
+                      variant="danger"
+                      title="Odpojit"
+                    />
                   </AlertDialogTrigger>
                   <AlertDialogContent className="border-white/10 bg-zinc-950 text-white">
                     <AlertDialogHeader>
                       <AlertDialogTitle>Odpojit počítač?</AlertDialogTitle>
                       <AlertDialogDescription className="text-zinc-400">
-                        Opravdu chcete odpojit počítač {computer.name}? Pokud je aplikace na počítači spuštěna, bude spojení ihned ukončeno.
+                        Opravdu chcete odpojit počítač {computer.name}? Pokud je
+                        aplikace na počítači spuštěna, bude spojení ihned
+                        ukončeno.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -165,6 +178,46 @@ export const ComputerCard = forwardRef<
                   </AlertDialogContent>
                 </AlertDialog>
               )}
+            </div>
+          </div>
+        )}
+        {isManagement && (
+          <div className="flex items-center gap-1.5 mt-4">
+            <div className="ml-auto">
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <ActionButton
+                    icon={Trash2}
+                    variant="danger"
+                    title="Odstranit"
+                    className="h-8 w-8 rounded-lg"
+                  />
+                </AlertDialogTrigger>
+                <AlertDialogContent
+                  size="sm"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <AlertDialogHeader>
+                    <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
+                      <Trash2 />
+                    </AlertDialogMedia>
+                    <AlertDialogTitle>Odstranit počítač?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Tímto trvale odstraníte počítač "{computer.name}" z
+                      databáze. Tato akce je nevratná.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Zrušit</AlertDialogCancel>
+                    <AlertDialogAction
+                      variant="destructive"
+                      onClick={() => wipe({ id: computer._id })}
+                    >
+                      Odstranit
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           </div>
         )}

@@ -53,6 +53,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const data = {
   navMain: [
@@ -154,46 +155,56 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <SidebarMenuButton
-                  size="lg"
-                  className="data-[slot=sidebar-menu-button]:!p-1.5 cursor-pointer"
+            {!user || (organization === undefined) ? (
+              <div className="flex items-center gap-2 px-1.5 py-2">
+                <Skeleton className="size-8 rounded-lg" />
+                <div className="grid flex-1 gap-1">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-3 w-16" />
+                </div>
+              </div>
+            ) : (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <SidebarMenuButton
+                    size="lg"
+                    className="data-[slot=sidebar-menu-button]:!p-1.5 cursor-pointer"
+                  >
+                    <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                      <Avatar className="size-8 rounded-lg">
+                        <AvatarImage src={orgImageUrl} alt={orgName} />
+                        <AvatarFallback className="rounded-lg bg-emerald-500/20 text-emerald-500">
+                          {orgName.charAt(0)}
+                        </AvatarFallback>
+                      </Avatar>
+                    </div>
+                    <div className="grid flex-1 text-left text-sm leading-tight">
+                      <span className="truncate font-semibold">{orgName}</span>
+                      <span className="truncate text-xs text-muted-foreground">{role}</span>
+                    </div>
+                    <IconSelector className="ml-auto size-4" />
+                  </SidebarMenuButton>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
+                  align="start"
+                  sideOffset={4}
                 >
-                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                    <Avatar className="size-8 rounded-lg">
-                      <AvatarImage src={orgImageUrl} alt={orgName} />
-                      <AvatarFallback className="rounded-lg bg-emerald-500/20 text-emerald-500">
-                        {orgName.charAt(0)}
-                      </AvatarFallback>
-                    </Avatar>
-                  </div>
-                  <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-semibold">{orgName}</span>
-                    <span className="truncate text-xs text-muted-foreground">{role}</span>
-                  </div>
-                  <IconSelector className="ml-auto size-4" />
-                </SidebarMenuButton>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
-                align="start"
-                sideOffset={4}
-              >
-                <DropdownMenuLabel className="text-muted-foreground text-xs">
-                  Organizations
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => setOpen(true)}>
-                  <IconArrowsExchange className="size-4" />
-                  Switch organization
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => openOrganizationProfile()}>
-                  <IconBuilding className="size-4" />
-                  Manage organization
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  <DropdownMenuLabel className="text-muted-foreground text-xs">
+                    Organizations
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setOpen(true)}>
+                    <IconArrowsExchange className="size-4" />
+                    Switch organization
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => openOrganizationProfile()}>
+                    <IconBuilding className="size-4" />
+                    Manage organization
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
 
             {/* Switch Organization Dialog */}
             <Dialog open={open} onOpenChange={setOpen}>

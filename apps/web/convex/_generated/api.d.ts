@@ -9,6 +9,8 @@
  */
 
 import type * as computers from "../computers.js";
+import type * as http from "../http.js";
+import type * as organizations from "../organizations.js";
 import type * as rooms from "../rooms.js";
 
 import type {
@@ -19,6 +21,8 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   computers: typeof computers;
+  http: typeof http;
+  organizations: typeof organizations;
   rooms: typeof rooms;
 }>;
 

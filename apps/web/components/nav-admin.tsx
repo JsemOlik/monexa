@@ -29,9 +29,11 @@ export function NavAdmin({
       <SidebarMenu>
         {items.map((item) => (
           <SidebarMenuItem key={item.name}>
-            <SidebarMenuButton 
+            <SidebarMenuButton
               asChild
-              isActive={pathname === item.url || pathname.startsWith(item.url + "/")}
+              isActive={
+                pathname === item.url || pathname.startsWith(item.url + "/")
+              }
             >
               <Link href={item.url}>
                 <item.icon />
