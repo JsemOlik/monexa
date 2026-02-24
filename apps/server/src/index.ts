@@ -17,7 +17,7 @@ const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer, {
 });
 
 // Subscribe to computer changes in Convex
-convex.onUpdate(api.computers.list, {}, (computers) => {
+convex.onUpdate(api.computers.internalList, {}, (computers) => {
   for (const computer of computers) {
     const socket = activeSockets.get(computer.id);
     if (socket) {
@@ -46,19 +46,29 @@ io.on("connection", (socket) => {
   let computerId: string | undefined; // Declare computerId here to be accessible by all handlers for this socket
 
   socket.on("registerComputer", async (data) => {
-    console.log(`[${new Date().toISOString()}] Registering computer: ${data.name} (${data.id}) on ${data.os}`);
+    console.log(`[${new Date().toISOString()}] Registering computer: ${data.name} (${data.id}) on ${data.os} (Org: ${data.orgId})`);
     try {
+      // Security: Validate Org ID exists before proceding
+      const orgCheck = await convex.query(api.computers.validateOrg, { id: data.orgId });
+      if (!orgCheck.isValid) {
+        console.warn(`[${new Date().toISOString()}] REJECTED registration for ${data.id}: Invalid Org ID ${data.orgId}`);
+        socket.disconnect(true);
+        return;
+      }
+
       const result = await convex.mutation(api.computers.register, {
         id: data.id,
         name: data.name,
         os: data.os,
+        orgId: data.orgId,
       }) as { isBlocked: boolean };
       
       console.log(`[${new Date().toISOString()}] Registration successful for: ${data.id}. Block status: ${result.isBlocked}`);
       
-      // Store computerId and block state for this socket
+      // Store computerId, orgId, and block state for this socket
       computerId = data.id;
       (socket as any).computerId = data.id;
+      (socket as any).orgId = data.orgId;
       (socket as any).isBlocked = result.isBlocked;
       activeSockets.set(data.id, socket);
 
@@ -72,11 +82,22 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("validateOrg" as any, async (data: { orgId: string }, callback: (res: { isValid: boolean }) => void) => {
+    try {
+      const result = await convex.query(api.computers.validateOrg, { id: data.orgId });
+      callback(result);
+    } catch (error) {
+      console.error(`[${new Date().toISOString()}] Org validation failed:`, error);
+      callback({ isValid: false });
+    }
+  });
+
   socket.on("heartbeat" as any, async () => {
     if (computerId) {
+      const orgId = (socket as any).orgId;
       // console.log(`[${new Date().toISOString()}] Heartbeat from: ${computerId}`);
       try {
-        await convex.mutation(api.computers.heartbeat, { id: computerId });
+        await convex.mutation(api.computers.heartbeat, { id: computerId, orgId });
       } catch (error) {
         console.error(`[${new Date().toISOString()}] Heartbeat failed for ${computerId}:`, error);
       }
