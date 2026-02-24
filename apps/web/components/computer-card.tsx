@@ -26,18 +26,35 @@ interface ComputerCardProps {
   };
 }
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+
 export function ComputerCard({ computer }: ComputerCardProps) {
   const [lastSeenText, setLastSeenText] = useState("");
   const [newName, setNewName] = useState(computer.name);
-  const [isOpen, setIsOpen] = useState(false);
+  const [isRenameOpen, setIsRenameOpen] = useState(false);
   const renameComputer = useMutation(api.computers.rename);
+  const setOffline = useMutation(api.computers.setOffline);
 
   const handleRename = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newName.trim()) {
       await renameComputer({ id: computer.id, newName: newName.trim() });
-      setIsOpen(false);
+      setIsRenameOpen(false);
     }
+  };
+
+  const handleDisconnect = async () => {
+    await setOffline({ id: computer.id });
   };
 
   useEffect(() => {
@@ -112,7 +129,7 @@ export function ComputerCard({ computer }: ComputerCardProps) {
           <ActionButton icon={Shield} />
           <ActionButton icon={Radar} />
 
-          <Dialog open={isOpen} onOpenChange={setIsOpen}>
+          <Dialog open={isRenameOpen} onOpenChange={setIsRenameOpen}>
             <DialogTrigger asChild>
               <ActionButton icon={Pencil} />
             </DialogTrigger>
@@ -139,7 +156,7 @@ export function ComputerCard({ computer }: ComputerCardProps) {
                   <Button
                     type="button"
                     variant="ghost"
-                    onClick={() => setIsOpen(false)}
+                    onClick={() => setIsRenameOpen(false)}
                     className="text-white hover:bg-white/5"
                   >
                     Cancel
@@ -156,7 +173,31 @@ export function ComputerCard({ computer }: ComputerCardProps) {
           </Dialog>
 
           <div className="ml-auto">
-            <ActionButton icon={Unplug} variant="danger" />
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <ActionButton icon={Unplug} variant="danger" />
+              </AlertDialogTrigger>
+              <AlertDialogContent className="bg-[#1c1c1c] border-border/10 text-white rounded-2xl">
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Disconnect Computer?</AlertDialogTitle>
+                  <AlertDialogDescription className="text-muted-foreground">
+                    This will mark the computer as offline in the dashboard.
+                    Are you sure you want to proceed?
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel className="bg-transparent border-none text-white hover:bg-white/5 hover:text-white">
+                    Cancel
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleDisconnect}
+                    className="bg-red-500 hover:bg-red-600 text-white border-none"
+                  >
+                    Disconnect
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </div>
       </div>
