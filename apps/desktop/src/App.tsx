@@ -44,7 +44,7 @@ function BlockedContent() {
 }
 
 function SurveyContent({ computerHostname }: { computerHostname: string }) {
-  const [mode, setMode] = useState<"prep" | "active" | "done">("prep");
+  const [mode, setMode] = useState<"prep" | "active" | "done" | null>(null);
   const [surveyData, setSurveyData] = useState<{
     id: string;
     launchId: string;
@@ -132,9 +132,21 @@ function SurveyContent({ computerHostname }: { computerHostname: string }) {
       handleStart(event.payload as any);
     });
 
+    const unlistenCancel = tauriListen(
+      "survey-cancel-trigger",
+      (event: any) => {
+        console.log("[SURVEY] Tauri: Received survey-cancel-trigger");
+        setMode(null);
+        setSurveyData(null);
+        invoke("toggle_survey_window", { open: false }).catch(console.error);
+        socket.emit("setSurveying", false);
+      },
+    );
+
     return () => {
       unlistenLaunch.then((fn: any) => fn());
       unlistenStart.then((fn: any) => fn());
+      unlistenCancel.then((fn: any) => fn());
     };
   }, []);
 
@@ -500,6 +512,11 @@ function App() {
       console.log("[SOCKET] surveyStart received:", data);
       tauriEmit("survey-start-trigger", data);
       invoke("toggle_survey_window", { open: true }).catch(console.error);
+    });
+
+    socket.on("surveyCancel", (data: any) => {
+      console.log("[SOCKET] surveyCancel received:", data);
+      tauriEmit("survey-cancel-trigger", data);
     });
 
     if (socket.connected) {

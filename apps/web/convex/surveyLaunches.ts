@@ -67,6 +67,33 @@ export const complete = mutation({
   },
 });
 
+// Remove a launch and its responses
+export const remove = mutation({
+  args: { id: v.id("surveyLaunches") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+
+    const orgId = (identity as any).org_id || identity.orgId || identity.subject;
+
+    const launch = await ctx.db.get(args.id);
+    if (!launch || launch.orgId !== orgId) throw new Error("Launch not found or unauthorized");
+
+    // 1. Delete all responses associated with this launch
+    const responses = await ctx.db
+      .query("surveyResponses")
+      .withIndex("by_launchId", (q) => q.eq("launchId", args.id))
+      .collect();
+
+    for (const resp of responses) {
+      await ctx.db.delete(resp._id);
+    }
+
+    // 2. Delete the launch record itself
+    await ctx.db.delete(args.id);
+  },
+});
+
 // Query pending launches for an org
 export const listPending = query({
   args: {},

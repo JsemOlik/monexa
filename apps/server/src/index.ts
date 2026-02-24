@@ -145,6 +145,17 @@ io.on("connection", async (socket) => {
     }
   });
 
+  // Called when admin cancels a pending survey
+  socket.on("cancelSurvey", async (data: { launchId: string; targets: string[] }) => {
+    console.log(`[${new Date().toISOString()}] cancelSurvey for launchId: ${data.launchId}. Targets: ${data.targets?.length ?? 0}`);
+    if (!data.targets) return;
+
+    for (const targetId of data.targets) {
+      console.log(`[${new Date().toISOString()}] Broadcasting surveyCancel to room ${targetId}`);
+      io.to(targetId).emit("surveyCancel", { launchId: data.launchId });
+    }
+  });
+
   // Called when admin clicks "Start" — computers show the actual questions
   socket.on("startSurvey", async (data: { launchId: string; survey: any; targets: string[] }) => {
     console.log(`[${new Date().toISOString()}] startSurvey for launchId: ${data.launchId}. Targets: ${data.targets?.length ?? 0}`);

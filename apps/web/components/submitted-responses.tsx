@@ -1,27 +1,61 @@
 "use client";
 
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { Card } from "@/components/ui/card";
 import {
-  Card,
   CardContent,
   CardHeader,
   CardTitle,
   CardDescription,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+} from "@/components/ui/card"; // Re-adding these as they are used later in the file
+import { Badge } from "@/components/ui/badge"; // Re-adding Badge as it is used later in the file
 import {
-  IconChevronRight,
-  IconCalendar,
-  IconClipboardList,
   IconCheck,
+  IconCalendar,
+  IconUsers, // Added
+  IconChevronRight,
+  IconDotsVertical, // Added
+  IconTrash, // Added
+  IconClipboardList,
 } from "@tabler/icons-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
-export function SubmittedResponses() {
-  const launches = useQuery(api.surveyResponses.listGrouped);
+export function SubmittedResponses({
+  searchQuery = "",
+}: {
+  searchQuery?: string;
+}) {
+  const allLaunches = useQuery(api.surveyResponses.listGrouped);
+  const launches = allLaunches?.filter((l: any) =>
+    l.surveyTitle.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
+  const removeLaunch = useMutation(api.surveyLaunches.remove);
+
+  const handleDelete = async (launchId: string) => {
+    try {
+      await removeLaunch({ id: launchId as any });
+      toast.success("Survey results deleted");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to delete survey results");
+    }
+  };
 
   if (launches === undefined) {
     return (
@@ -84,18 +118,49 @@ export function SubmittedResponses() {
                   </div>
                 </div>
               </div>
-              <Link
-                key={launch.launchId}
-                href={`/dashboard/surveys/results/${launch.launchId}`}
-                className="block group"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="px-6 py-3 rounded-2xl bg-white/5 text-zinc-400 font-bold uppercase tracking-tighter group-hover:bg-emerald-500 group-hover:text-white transition-all flex items-center gap-2">
-                    <span>Zobrazit výsledky</span>
-                    <IconChevronRight className="size-5 group-hover:translate-x-0.5 transition-transform" />
-                  </div>
-                </div>
-              </Link>
+              <div className="flex items-center gap-3">
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-10 rounded-xl hover:bg-red-500/10 hover:text-red-500 text-zinc-500 transition-all"
+                    >
+                      <IconTrash className="size-5" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent className="bg-zinc-950 border-white/10 rounded-3xl">
+                    <AlertDialogHeader>
+                      <AlertDialogTitle className="text-xl font-bold">
+                        Delete survey results?
+                      </AlertDialogTitle>
+                      <AlertDialogDescription className="text-zinc-400">
+                        This will permanently delete all responses for this
+                        campaign. This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="gap-2">
+                      <AlertDialogCancel className="bg-white/5 border-white/10 rounded-xl hover:bg-white/10 transition-all">
+                        Cancel
+                      </AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => handleDelete(launch.launchId)}
+                        className="bg-red-500 hover:bg-red-600 text-white rounded-xl transition-all"
+                      >
+                        Delete
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+
+                <Link
+                  href={`/dashboard/surveys/results/${launch.launchId}`}
+                  className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-xl transition-all group/link"
+                >
+                  <span className="text-sm font-medium">View Results</span>
+                  <IconChevronRight className="size-4 group-hover/link:translate-x-0.5 transition-transform" />
+                </Link>
+              </div>
             </div>
           </CardHeader>
         </Card>

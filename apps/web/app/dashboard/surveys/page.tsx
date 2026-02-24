@@ -10,8 +10,12 @@ import { SubmittedResponses } from "@/components/submitted-responses";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Badge } from "@/components/ui/badge";
+import { useState } from "react";
+import { IconSearch } from "@tabler/icons-react";
+import { Input } from "@/components/ui/input";
 
 export default function SurveysPage() {
+  const [searchQuery, setSearchQuery] = useState("");
   const pendingCount = useQuery(api.surveyLaunches.listPending)?.length ?? 0;
   const responseCount = useQuery(api.surveyResponses.listGrouped)?.length ?? 0;
 
@@ -60,13 +64,23 @@ export default function SurveysPage() {
                   )}
                 </TabsTrigger>
               </TabsList>
+
+              <div className="relative w-64">
+                <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-zinc-500" />
+                <Input
+                  placeholder="Search surveys..."
+                  className="pl-9 bg-white/5 border-white/10 rounded-xl h-10 focus-visible:ring-emerald-500/20"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
             </div>
 
             <TabsContent
               value="all"
               className="mt-0 border-none p-0 outline-none"
             >
-              <SurveyList />
+              <SurveyList searchQuery={searchQuery} />
             </TabsContent>
 
             <TabsContent
@@ -83,7 +97,7 @@ export default function SurveysPage() {
                     mode.
                   </p>
                 </div>
-                <PendingLaunches />
+                <PendingLaunches searchQuery={searchQuery} />
               </div>
             </TabsContent>
 
@@ -100,7 +114,7 @@ export default function SurveysPage() {
                     View answers from completed surveys across all computers.
                   </p>
                 </div>
-                <SubmittedResponses />
+                <SubmittedResponses searchQuery={searchQuery} />
               </div>
             </TabsContent>
           </Tabs>

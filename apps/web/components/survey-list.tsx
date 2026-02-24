@@ -32,8 +32,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 
-export function SurveyList() {
-  const surveys = useQuery(api.surveys.list);
+export function SurveyList({ searchQuery = "" }: { searchQuery?: string }) {
+  const allSurveys = useQuery(api.surveys.list);
+  const surveys = allSurveys?.filter((s) =>
+    s.title.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
   const removeSurvey = useMutation(api.surveys.remove);
   const router = useRouter();
 

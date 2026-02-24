@@ -18,6 +18,8 @@ import {
   IconLetterT,
   IconList,
   IconCheck,
+  IconChevronUp,
+  IconChevronDown,
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -78,6 +80,18 @@ export function SurveyWizard({
     setQuestions(
       questions.map((q) => (q.id === id ? { ...q, ...updates } : q)),
     );
+  };
+
+  const moveQuestion = (idx: number, direction: "up" | "down") => {
+    if (direction === "up" && idx === 0) return;
+    if (direction === "down" && idx === questions.length - 1) return;
+
+    const newIdx = direction === "up" ? idx - 1 : idx + 1;
+    const newQuestions = [...questions];
+    const temp = newQuestions[idx];
+    newQuestions[idx] = newQuestions[newIdx];
+    newQuestions[newIdx] = temp;
+    setQuestions(newQuestions);
   };
 
   const handleSave = async () => {
@@ -301,14 +315,34 @@ export function SurveyWizard({
                             )}
                             {q.type.replace("_", " ").toUpperCase()}
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => removeQuestion(q.id)}
-                            className="size-8 opacity-0 group-hover:opacity-100 transition-opacity text-zinc-500 hover:text-red-500 hover:bg-red-500/10"
-                          >
-                            <IconTrash className="size-4" />
-                          </Button>
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              disabled={idx === 0}
+                              onClick={() => moveQuestion(idx, "up")}
+                              className="size-8 text-zinc-500 hover:text-emerald-500 hover:bg-emerald-500/10 disabled:opacity-30 disabled:hover:bg-transparent"
+                            >
+                              <IconChevronUp className="size-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              disabled={idx === questions.length - 1}
+                              onClick={() => moveQuestion(idx, "down")}
+                              className="size-8 text-zinc-500 hover:text-emerald-500 hover:bg-emerald-500/10 disabled:opacity-30 disabled:hover:bg-transparent"
+                            >
+                              <IconChevronDown className="size-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeQuestion(q.id)}
+                              className="size-8 text-zinc-500 hover:text-red-500 hover:bg-red-500/10"
+                            >
+                              <IconTrash className="size-4" />
+                            </Button>
+                          </div>
                         </div>
                         <Input
                           placeholder="Your question here..."

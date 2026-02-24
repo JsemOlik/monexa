@@ -15,9 +15,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useState } from "react";
 
-export function PendingLaunches() {
-  const pendingLaunches = useQuery(api.surveyLaunches.listPending);
+export function PendingLaunches({
+  searchQuery = "",
+}: {
+  searchQuery?: string;
+}) {
+  const allPendingLaunches = useQuery(api.surveyLaunches.listPending);
+  const pendingLaunches = allPendingLaunches?.filter((l: any) =>
+    l.surveyTitle.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
   const startSurvey = useMutation(api.surveyLaunches.start);
+  const removeSurvey = useMutation(api.surveyLaunches.remove);
   const [startingIds, setStartingIds] = useState<Set<string>>(new Set());
 
   const handleStart = async (launchId: string) => {
@@ -54,6 +62,26 @@ export function PendingLaunches() {
         next.delete(launchId);
         return next;
       });
+    }
+  };
+
+  const handleCancel = async (launch: any) => {
+    if (!confirm("Are you sure you want to cancel this survey launch?")) return;
+    try {
+      // 1. Delete from DB
+      await removeSurvey({ id: launch._id });
+
+      // 2. Notify socket server
+      const { socket } = await import("@/lib/socket");
+      socket.emit("cancelSurvey", {
+        launchId: launch._id,
+        targets: launch.targets,
+      });
+
+      toast.success("Survey launch cancelled");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to cancel survey launch");
     }
   };
 
@@ -114,33 +142,43 @@ export function PendingLaunches() {
             <span>Targeting {launch.targets.length} computers</span>
           </div>
 
-          <Button
-            className={`w-full text-white rounded-xl h-10 mt-2 transition-all ${
-              launch.status === "started"
-                ? "bg-sidebar-accent hover:bg-sidebar-accent/80 border border-white/10"
-                : "bg-emerald-500 hover:bg-emerald-600"
-            }`}
-            onClick={() =>
-              launch.status !== "started" && handleStart(launch._id)
-            }
-            disabled={
-              startingIds.has(launch._id) || launch.status === "started"
-            }
-          >
-            {startingIds.has(launch._id) ? (
-              <>Starting...</>
-            ) : launch.status === "started" ? (
-              <>
-                <IconCheck className="mr-2 h-4 w-4" />
-                Questions Live
-              </>
-            ) : (
-              <>
-                <IconPlayerPlayFilled className="mr-2 h-4 w-4" />
-                Start Questions
-              </>
-            )}
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              className="flex-1 border-white/5 hover:bg-red-500/10 hover:text-red-500 rounded-xl h-10 mt-2 transition-all"
+              onClick={() => handleCancel(launch)}
+              disabled={startingIds.has(launch._id)}
+            >
+              Cancel
+            </Button>
+            <Button
+              className={`flex-1 text-white rounded-xl h-10 mt-2 transition-all ${
+                launch.status === "started"
+                  ? "bg-sidebar-accent hover:bg-sidebar-accent/80 border border-white/10"
+                  : "bg-emerald-500 hover:bg-emerald-600"
+              }`}
+              onClick={() =>
+                launch.status !== "started" && handleStart(launch._id)
+              }
+              disabled={
+                startingIds.has(launch._id) || launch.status === "started"
+              }
+            >
+              {startingIds.has(launch._id) ? (
+                <>Starting...</>
+              ) : launch.status === "started" ? (
+                <>
+                  <IconCheck className="mr-2 h-4 w-4" />
+                  Live
+                </>
+              ) : (
+                <>
+                  <IconPlayerPlayFilled className="mr-2 h-4 w-4" />
+                  Start
+                </>
+              )}
+            </Button>
+          </div>
         </Card>
       ))}
     </div>
