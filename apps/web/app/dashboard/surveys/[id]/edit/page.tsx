@@ -36,11 +36,21 @@ export default function EditSurveyPage({
               <Skeleton className="h-12 w-64 rounded-2xl" />
               <Skeleton className="h-[400px] w-full rounded-3xl" />
             </div>
+          ) : !survey ? (
+            <div className="max-w-4xl mx-auto w-full py-20 text-center space-y-4">
+              <h1 className="text-2xl font-bold text-white">
+                Survey not found
+              </h1>
+              <p className="text-zinc-400 text-sm">
+                This survey may have been deleted or you don't have access.
+              </p>
+            </div>
           ) : (
             <SurveyWizard
               surveyId={survey._id}
               initialTitle={survey.title}
               initialQuestions={survey.steps}
+              initialStyle={survey.style}
             />
           )}
         </div>

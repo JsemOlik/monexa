@@ -101,10 +101,7 @@ export function SurveyList() {
           {surveys.map((survey) => (
             <Card
               key={survey._id}
-              className="p-6 bg-zinc-950 border-white/5 hover:border-emerald-500/30 transition-all rounded-2xl group relative cursor-pointer"
-              onClick={() =>
-                router.push(`/dashboard/surveys/${survey._id}/edit`)
-              }
+              className="p-6 bg-sidebar border-white/5 hover:border-emerald-500/30 transition-all rounded-2xl group relative"
             >
               {/* Action buttons — appear on hover */}
               <div
@@ -133,7 +130,7 @@ export function SurveyList() {
                       <IconTrash className="size-4" />
                     </Button>
                   </AlertDialogTrigger>
-                  <AlertDialogContent className="border-white/10 bg-zinc-950 text-white">
+                  <AlertDialogContent className="border-white/10 bg-sidebar text-white">
                     <AlertDialogHeader>
                       <AlertDialogTitle>Delete survey?</AlertDialogTitle>
                       <AlertDialogDescription className="text-zinc-400">

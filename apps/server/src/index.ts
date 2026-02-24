@@ -123,9 +123,11 @@ io.on("connection", async (socket) => {
     console.log(`[${new Date().toISOString()}] launchSurvey for ${data.surveyId}. Targets: ${data.targets.length}`);
 
     let surveyTitle = "Survey";
+    let surveyStyle = "futuristic";
     try {
       const survey = await convex.query(api.surveys.getInternal, { id: data.surveyId as any });
       surveyTitle = survey?.title ?? "Survey";
+      surveyStyle = survey?.style ?? "futuristic";
     } catch (_) {}
 
     for (const targetId of data.targets) {
@@ -135,6 +137,7 @@ io.on("connection", async (socket) => {
           surveyId: data.surveyId,
           launchId: data.launchId,
           surveyTitle,
+          style: surveyStyle,
         });
       } else {
         console.warn(`[${new Date().toISOString()}] SKIPPING ${targetId}: No active sockets in room`);
@@ -160,6 +163,7 @@ io.on("connection", async (socket) => {
             surveyId: survey._id,
             launchId: launchId,
             steps: survey.steps,
+            style: survey.style ?? "futuristic",
           });
         } else {
           console.warn(`[${new Date().toISOString()}] Room ${targetId} is EMPTY. Fallback check activeSockets: ${activeSockets.has(targetId)}`);
@@ -173,6 +177,7 @@ io.on("connection", async (socket) => {
                   surveyId: survey._id,
                   launchId: launchId,
                   steps: survey.steps,
+                  style: survey.style ?? "futuristic",
                });
             }
           }

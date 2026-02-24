@@ -11,7 +11,7 @@ export function SiteHeader() {
   const { user } = useUser();
   const { organization } = useOrganization();
   const ensureOrg = useMutation(api.computers.ensureOrg);
-  
+
   const orgId = organization?.id || user?.id;
 
   useEffect(() => {
@@ -36,16 +36,16 @@ export function SiteHeader() {
         />
         <h1 className="text-base font-medium">Dashboard</h1>
         <div className="ml-auto flex items-center gap-4">
-          {!user || (organization === undefined) ? (
+          {!user || organization === undefined ? (
             <Skeleton className="h-7 w-32 rounded-md bg-zinc-900 border border-zinc-800" />
           ) : orgId ? (
-            <div 
+            <div
               onClick={copyOrgId}
               className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-zinc-900 border border-zinc-800 text-xs font-mono text-zinc-400 hover:text-white hover:border-zinc-700 cursor-pointer transition-all"
               title="Click to copy Organization ID"
             >
               <Hash className="h-3 w-3" />
-              <span>Org: {orgId.substring(0, 12)}...</span>
+              <span>Org ID: {orgId.substring(0, 12)}...</span>
               <Copy className="h-3 w-3 ml-1" />
             </div>
           ) : null}

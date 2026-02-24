@@ -37,12 +37,14 @@ interface SurveyWizardProps {
   surveyId?: Id<"surveys">;
   initialTitle?: string;
   initialQuestions?: Question[];
+  initialStyle?: "default" | "futuristic";
 }
 
 export function SurveyWizard({
   surveyId,
   initialTitle = "",
   initialQuestions = [],
+  initialStyle = "default",
 }: SurveyWizardProps) {
   const router = useRouter();
   const createSurvey = useMutation(api.surveys.create);
@@ -54,6 +56,7 @@ export function SurveyWizard({
 
   const [title, setTitle] = useState(initialTitle);
   const [questions, setQuestions] = useState<Question[]>(initialQuestions);
+  const [style, setStyle] = useState<"default" | "futuristic">(initialStyle);
 
   const addQuestion = (type: QuestionType) => {
     const newQuestion: Question = {
@@ -90,10 +93,10 @@ export function SurveyWizard({
     setLoading(true);
     try {
       if (isEditMode) {
-        await updateSurvey({ id: surveyId, title, steps: questions });
+        await updateSurvey({ id: surveyId, title, steps: questions, style });
         toast.success("Survey updated successfully!");
       } else {
-        await createSurvey({ title, steps: questions });
+        await createSurvey({ title, steps: questions, style });
         toast.success("Survey created successfully!");
       }
       router.push("/dashboard/surveys");
@@ -118,7 +121,7 @@ export function SurveyWizard({
               className={cn(
                 "w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all border-2",
                 step === s
-                  ? "bg-emerald-500 border-emerald-500 text-white scale-110 shadow-[0_0_15px_rgba(16,185,129,0.3)]"
+                  ? "bg-emerald-500 border-emerald-500 text-white scale-110"
                   : step > s
                     ? "bg-emerald-500/20 border-emerald-500 text-emerald-500"
                     : "bg-zinc-950 border-zinc-800 text-zinc-500",
@@ -141,7 +144,7 @@ export function SurveyWizard({
       <div className="min-h-[500px]">
         {/* Step 1: Basics */}
         {step === 1 && (
-          <Card className="p-8 border-white/5 bg-zinc-950 rounded-3xl animate-in fade-in slide-in-from-bottom-4">
+          <Card className="p-8 border-white/5 bg-sidebar rounded-3xl animate-in fade-in slide-in-from-bottom-4">
             <div className="space-y-6">
               <div className="space-y-2">
                 <h2 className="text-3xl font-bold text-white">
@@ -165,6 +168,57 @@ export function SurveyWizard({
                   onChange={(e) => setTitle(e.target.value)}
                   className="h-14 bg-white/5 border-white/10 rounded-xl px-4 text-lg focus:ring-emerald-500/20 focus:border-emerald-500"
                 />
+              </div>
+
+              <div className="space-y-4">
+                <Label className="text-sm font-medium text-zinc-300">
+                  Visual Style
+                </Label>
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    onClick={() => setStyle("default")}
+                    className={cn(
+                      "p-6 rounded-2xl border-2 text-left transition-all space-y-2",
+                      style === "default"
+                        ? "bg-emerald-500/10 border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.1)]"
+                        : "bg-white/5 border-white/5 hover:border-white/10",
+                    )}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-lg text-white">
+                        Default
+                      </span>
+                      {style === "default" && (
+                        <IconCheck className="size-5 text-emerald-500" />
+                      )}
+                    </div>
+                    <p className="text-sm text-zinc-500 font-medium">
+                      Clean, professional, and standard UI elements.
+                    </p>
+                  </button>
+
+                  <button
+                    onClick={() => setStyle("futuristic")}
+                    className={cn(
+                      "p-6 rounded-2xl border-2 text-left transition-all space-y-2",
+                      style === "futuristic"
+                        ? "bg-emerald-500/10 border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.1)]"
+                        : "bg-white/5 border-white/5 hover:border-white/10",
+                    )}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-black italic text-lg text-white uppercase tracking-tighter">
+                        Futuristic
+                      </span>
+                      {style === "futuristic" && (
+                        <IconCheck className="size-5 text-emerald-500" />
+                      )}
+                    </div>
+                    <p className="text-sm text-zinc-500 font-medium">
+                      Bold aesthetics, fonts, and glowing elements.
+                    </p>
+                  </button>
+                </div>
               </div>
               <div className="pt-4 flex justify-end">
                 <Button
@@ -214,11 +268,11 @@ export function SurveyWizard({
             </div>
 
             {questions.length === 0 ? (
-              <Card className="p-12 border-dashed border-white/10 bg-zinc-950/50 flex flex-col items-center justify-center text-center rounded-3xl">
+              <Card className="p-12 border-dashed border-white/10 bg-sidebar flex flex-col items-center justify-center text-center rounded-3xl">
                 <div className="p-3 bg-white/5 rounded-2xl mb-4">
                   <IconPlus className="size-8 text-zinc-500" />
                 </div>
-                <h3 className="text-zinc-300 font-semibold italic">
+                <h3 className="text-zinc-300 font-semibold">
                   Add your first question to get started
                 </h3>
               </Card>
@@ -227,7 +281,7 @@ export function SurveyWizard({
                 {questions.map((q, idx) => (
                   <Card
                     key={q.id}
-                    className="p-6 border-white/5 bg-zinc-950 hover:border-emerald-500/20 transition-all rounded-2xl group relative"
+                    className="p-6 border-white/5 bg-sidebar hover:border-emerald-500/20 transition-all rounded-2xl group relative"
                   >
                     <div className="absolute -left-3 top-1/2 -translate-y-1/2 size-8 bg-emerald-500 rounded-lg flex items-center justify-center text-white font-bold opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
                       {idx + 1}
@@ -262,11 +316,11 @@ export function SurveyWizard({
                           onChange={(e) =>
                             updateQuestion(q.id, { question: e.target.value })
                           }
-                          className="border-none bg-transparent p-0 text-xl font-medium focus-visible:ring-0 placeholder:text-zinc-700"
+                          className="border-none bg-transparent p-3 text-xl font-medium focus-visible:ring-0 placeholder:text-zinc-700"
                         />
                         {q.type === "multiple_choice" && (
                           <div className="space-y-2 pt-2">
-                            <Label className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">
+                            <Label className="text-[10px] tracking-wider text-zinc-500 font-bold">
                               Options
                             </Label>
                             <div className="grid grid-cols-2 gap-2">
@@ -313,7 +367,7 @@ export function SurveyWizard({
                                     ],
                                   })
                                 }
-                                className="h-8 border-dashed border-white/10 bg-transparent text-xs text-zinc-500 hover:text-emerald-500 hover:border-emerald-500/50 rounded-lg"
+                                className="h-8 border-dashed border-white/10 bg-transparent text-xs text-zinc-500 hover:text-emerald-500 hover:border-emerald-500/50 rounded-lg mr-10"
                               >
                                 <IconPlus className="size-3 mr-2" /> Add Option
                               </Button>
@@ -351,7 +405,7 @@ export function SurveyWizard({
 
         {/* Step 3: Review & Save */}
         {step === 3 && (
-          <Card className="p-8 border-white/5 bg-zinc-950 rounded-3xl animate-in zoom-in-95">
+          <Card className="p-8 border-white/5 bg-sidebar rounded-3xl animate-in zoom-in-95">
             <div className="space-y-8">
               <div className="text-center space-y-2">
                 <div className="mx-auto size-16 bg-emerald-500/10 rounded-full flex items-center justify-center mb-4">
@@ -367,7 +421,7 @@ export function SurveyWizard({
               </div>
 
               <div className="bg-white/5 rounded-2xl p-6 border border-white/5">
-                <h3 className="text-sm font-bold text-zinc-500 uppercase tracking-wider mb-4">
+                <h3 className="text-sm font-bold text-zinc-500 mb-4">
                   Preview
                 </h3>
                 <div className="space-y-4">

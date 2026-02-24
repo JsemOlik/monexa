@@ -55,13 +55,23 @@ export default function SurveyResultsPage() {
 
   const renderStars = (rating: string) => {
     const num = parseInt(rating) || 0;
+    if (!data || !data.survey) return null;
+
     return (
-      <div className="flex gap-0.5 text-amber-400">
+      <div className="flex gap-0.5 mt-1 text-amber-400">
         {[1, 2, 3, 4, 5].map((s) =>
           s <= num ? (
             <IconStarFilled key={s} className="size-3.5" />
           ) : (
-            <IconStar key={s} className="size-3.5 text-zinc-700" />
+            <IconStar
+              key={s}
+              className={cn(
+                "size-3.5",
+                data.survey.style !== "default"
+                  ? "text-zinc-700"
+                  : "text-zinc-300",
+              )}
+            />
           ),
         )}
       </div>
@@ -144,7 +154,7 @@ export default function SurveyResultsPage() {
               className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors group"
             >
               <IconChevronLeft className="size-4 group-hover:-translate-x-0.5 transition-transform" />
-              <span className="text-[10px] font-black uppercase tracking-[0.2em]">
+              <span className="text-[0.7rem] font-medium uppercase ">
                 Back to Surveys
               </span>
             </button>
@@ -154,7 +164,7 @@ export default function SurveyResultsPage() {
                 <Badge className="bg-emerald-500/10 text-emerald-500 border-none px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-lg">
                   Results Campaign
                 </Badge>
-                <h1 className="text-4xl font-black tracking-tighter uppercase italic text-white leading-tight">
+                <h1 className={cn("text-4xl font-black")}>
                   {data.survey?.title || "Unknown Survey"}
                 </h1>
                 <div className="flex items-center gap-6 text-[10px] text-zinc-500 font-bold uppercase tracking-widest pt-1">
@@ -193,10 +203,10 @@ export default function SurveyResultsPage() {
                   <Card
                     key={resp._id}
                     className={cn(
-                      "bg-zinc-900/40 border-white/5 rounded-2xl overflow-hidden transition-all group/card",
+                      "rounded-2xl overflow-hidden transition-all group/card border",
                       isExpanded
-                        ? "border-emerald-500/30 bg-white/[0.02] shadow-2xl"
-                        : "hover:border-white/10",
+                        ? "border-emerald-500/30 bg-white/[0.02]"
+                        : "bg-sidebar border-white/5 hover:border-white/10",
                     )}
                   >
                     <button
@@ -211,16 +221,16 @@ export default function SurveyResultsPage() {
                             "size-10 rounded-xl flex items-center justify-center transition-colors",
                             isExpanded
                               ? "bg-emerald-500 text-white"
-                              : "bg-zinc-800 text-zinc-500 group-hover/card:bg-zinc-700",
+                              : "bg-sidebar text-zinc-500 group-hover/card:bg-sidebar-accent",
                           )}
                         >
                           <IconDeviceDesktop className="size-5" />
                         </div>
                         <div>
-                          <h3 className="text-sm font-black text-white uppercase tracking-tight">
+                          <h3 className="text-sm font-bold">
                             {resp.computerHostname}
                           </h3>
-                          <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest">
+                          <p className="text-[0.8rem] text-zinc-600 font-bold uppercase tracking-widest">
                             {new Date(resp.submittedAt).toLocaleTimeString()}
                           </p>
                         </div>
@@ -229,7 +239,7 @@ export default function SurveyResultsPage() {
                       <div className="flex items-center gap-3">
                         <div className="hidden md:flex items-center gap-2 bg-emerald-500/5 px-2 py-1 rounded-lg">
                           <IconCheck className="size-3 text-emerald-500" />
-                          <span className="text-[10px] font-black text-emerald-500/80 uppercase tracking-widest">
+                          <span className="text-[0.6rem] font-black text-emerald-500/80 uppercase tracking-widest">
                             Done
                           </span>
                         </div>
@@ -260,7 +270,7 @@ export default function SurveyResultsPage() {
                       )}
                     >
                       <div className="overflow-hidden">
-                        <div className="p-4 bg-black/20 grid gap-3 sm:grid-cols-2">
+                        <div className="p-4 grid gap-3 sm:grid-cols-2 bg-black/20">
                           {resp.answers.map((answer: any, idx: number) => {
                             const qText = findQuestion(answer.questionId);
                             const isStars = isStarRating(answer.questionId);
@@ -268,17 +278,26 @@ export default function SurveyResultsPage() {
                             return (
                               <div
                                 key={idx}
-                                className="bg-white/[0.03] rounded-xl p-3 border border-white/5 hover:border-emerald-500/20 transition-colors"
+                                className="rounded-xl p-3 border transition-colors bg-white/[0.03] border-white/5 hover:border-emerald-500/20"
                               >
-                                <p className="text-[9px] uppercase tracking-[0.1em] text-zinc-500 font-black mb-1.5 flex items-center gap-2">
-                                  <span className="size-1 bg-emerald-500 rounded-full" />
+                                <p className="text-[0.8rem] tracking-[0.1em] font-black mb-1.5 flex items-center gap-2 text-zinc-500">
+                                  <span className="size-1 rounded-full bg-emerald-500" />
                                   {qText}
                                 </p>
                                 {isStars ? (
                                   renderStars(answer.value)
                                 ) : (
-                                  <p className="text-sm text-zinc-200 font-medium italic">
-                                    "{answer.value}"
+                                  <p
+                                    className={cn(
+                                      "text-sm font-medium",
+                                      data.survey?.style !== "default"
+                                        ? "text-zinc-200"
+                                        : "text-zinc-200",
+                                    )}
+                                  >
+                                    {data.survey?.style !== "default"
+                                      ? `"${answer.value}"`
+                                      : answer.value}
                                   </p>
                                 )}
                               </div>

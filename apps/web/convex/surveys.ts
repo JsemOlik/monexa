@@ -4,6 +4,7 @@ import { mutation, query } from "./_generated/server";
 export const create = mutation({
   args: {
     title: v.string(),
+    style: v.union(v.literal("futuristic"), v.literal("default")),
     steps: v.array(
       v.object({
         id: v.string(),
@@ -30,6 +31,7 @@ export const create = mutation({
       status: "draft",
       createdAt: Date.now(),
       steps: args.steps,
+      style: args.style,
     });
 
     return surveyId;
@@ -56,7 +58,7 @@ export const get = query({
   args: { id: v.id("surveys") },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Unauthenticated");
+    if (!identity) return null;
 
     const orgId = (identity as any).org_id || identity.orgId || identity.subject;
 
@@ -90,6 +92,7 @@ export const update = mutation({
   args: {
     id: v.id("surveys"),
     title: v.string(),
+    style: v.union(v.literal("futuristic"), v.literal("default")),
     steps: v.array(
       v.object({
         id: v.string(),
@@ -118,6 +121,7 @@ export const update = mutation({
     await ctx.db.patch(args.id, {
       title: args.title,
       steps: args.steps,
+      style: args.style,
     });
   },
 });

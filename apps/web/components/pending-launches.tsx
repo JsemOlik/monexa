@@ -86,7 +86,7 @@ export function PendingLaunches() {
       {pendingLaunches.map((launch) => (
         <Card
           key={launch._id}
-          className="p-6 bg-zinc-950 border-white/5 hover:border-emerald-500/30 transition-all rounded-2xl group flex flex-col gap-4"
+          className="p-6 bg-sidebar border-white/5 hover:border-emerald-500/30 transition-all rounded-2xl group flex flex-col gap-4"
         >
           <div className="flex justify-between items-start">
             <div className="space-y-1">
@@ -115,10 +115,10 @@ export function PendingLaunches() {
           </div>
 
           <Button
-            className={`w-full text-white rounded-xl h-10 mt-2 shadow-lg transition-all ${
+            className={`w-full text-white rounded-xl h-10 mt-2 transition-all ${
               launch.status === "started"
-                ? "bg-zinc-800 hover:bg-zinc-700 border border-white/10"
-                : "bg-emerald-500 hover:bg-emerald-600 shadow-[0_4px_12px_rgba(16,185,129,0.2)]"
+                ? "bg-sidebar-accent hover:bg-sidebar-accent/80 border border-white/10"
+                : "bg-emerald-500 hover:bg-emerald-600"
             }`}
             onClick={() =>
               launch.status !== "started" && handleStart(launch._id)

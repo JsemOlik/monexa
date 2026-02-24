@@ -46,6 +46,7 @@ export default defineSchema({
         options: v.optional(v.array(v.string())),
       })
     ),
+    style: v.optional(v.union(v.literal("futuristic"), v.literal("default"))),
   })
     .index("by_orgId", ["orgId"])
     .index("by_status", ["status"]),

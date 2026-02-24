@@ -17,12 +17,18 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-body {
+html, body, #root {
   margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+body {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
   background-color: #1c1c1c; /* matches sidebar colour of dashboard */
   user-select: none;
   -webkit-user-select: none;

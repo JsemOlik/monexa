@@ -146,9 +146,9 @@ export function LaunchSurveyWizard({
         if (!val) reset();
       }}
     >
-      <DialogContent className="max-w-2xl bg-zinc-950 border-white/5 p-0 overflow-hidden rounded-3xl">
+      <DialogContent className="max-w-2xl bg-sidebar border-white/5 p-0 overflow-hidden rounded-3xl">
         <div className="flex flex-col h-[600px]">
-          <DialogHeader className="p-6 border-b border-white/5 bg-zinc-900/50">
+          <DialogHeader className="p-6 border-b border-white/5 bg-sidebar-accent">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-emerald-500/20 rounded-xl">
                 <IconRocket className="size-5 text-emerald-500" />
@@ -203,7 +203,7 @@ export function LaunchSurveyWizard({
                             "p-2 rounded-lg",
                             selectedSurveyId === survey._id
                               ? "bg-emerald-500 text-white"
-                              : "bg-zinc-800 text-zinc-400",
+                              : "bg-sidebar-accent text-zinc-400",
                           )}
                         >
                           <IconForms className="size-5" />
@@ -345,7 +345,7 @@ export function LaunchSurveyWizard({
             )}
           </div>
 
-          <DialogFooter className="p-6 bg-zinc-900/50 border-t border-white/5">
+          <DialogFooter className="p-6 bg-sidebar-accent border-t border-white/5">
             {step === 1 ? (
               <Button
                 disabled={!selectedSurveyId}
